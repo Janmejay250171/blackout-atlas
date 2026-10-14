@@ -1,0 +1,10 @@
+# Compiled Executables
+*.exe
+*.o
+*.obj
+
+# Editor & System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

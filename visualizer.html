@@ -1,0 +1,2712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackout Atlas — Campus Network Visual Simulator</title>
+  <style>
+    /* Theme Variables */
+    :root {
+      /* Frosted Blueprint Light Theme (Default, matching blueprint glow) */
+      --bg-page: #f8fafc;
+      --bg-blueprint: #ffffff;
+      --bg-card: rgba(255, 255, 255, 0.92);
+      --bg-card-subtle: rgba(248, 250, 252, 0.95);
+      --border-color: rgba(226, 232, 240, 0.95);
+      --border-focus: #2563eb;
+      --shadow-card: 0 8px 24px -4px rgba(15, 23, 42, 0.06), 0 4px 8px -4px rgba(15, 23, 42, 0.04);
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #94a3b8;
+
+      /* Graph Colors */
+      --color-working: #10b981;
+      --color-working-glow: rgba(16, 185, 129, 0.45);
+      --color-failed: #ef4444;
+      --color-failed-glow: rgba(239, 68, 68, 0.45);
+      --color-unavailable: #94a3b8;
+      --color-bfs: #0284c7;
+      --color-bfs-glow: rgba(2, 132, 199, 0.55);
+      --color-prim-working: #10b981;
+      --color-prim-repair: #f59e0b;
+      --color-prim-glow: rgba(245, 158, 11, 0.6);
+
+      /* Node styles */
+      --node-fill: #ffffff;
+      --node-stroke: #2563eb;
+      --node-shadow: rgba(37, 99, 235, 0.2);
+
+      /* Grid lines */
+      --grid-line: rgba(203, 213, 225, 0.6);
+    }
+
+    [data-theme="dark"] {
+      --bg-page: #0a0e17;
+      --bg-blueprint: #0d1424;
+      --bg-card: rgba(17, 24, 39, 0.92);
+      --bg-card-subtle: #0f172a;
+      --border-color: #1f293d;
+      --border-focus: #3b82f6;
+      --shadow-card: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --color-working: #10b981;
+      --color-working-glow: rgba(16, 185, 129, 0.55);
+      --color-failed: #ef4444;
+      --color-failed-glow: rgba(239, 68, 68, 0.55);
+      --color-unavailable: #64748b;
+      --color-bfs: #06b6d4;
+      --color-bfs-glow: rgba(6, 182, 212, 0.65);
+      --color-prim-working: #10b981;
+      --color-prim-repair: #fbbf24;
+      --color-prim-glow: rgba(251, 191, 36, 0.65);
+
+      --node-fill: #1e293b;
+      --node-stroke: #3b82f6;
+      --node-shadow: rgba(0, 0, 0, 0.6);
+
+      --grid-line: rgba(51, 65, 85, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      background-image:
+        radial-gradient(circle at 72% 35%, rgba(56, 189, 248, 0.38) 0%, rgba(125, 211, 252, 0.22) 30%, transparent 65%),
+        radial-gradient(circle at 88% 65%, rgba(216, 180, 254, 0.35) 0%, rgba(233, 213, 255, 0.18) 35%, transparent 70%),
+        radial-gradient(circle at 45% 15%, rgba(186, 230, 253, 0.32) 0%, transparent 55%),
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      padding-bottom: 30px;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+      color: #fff;
+    }
+
+    .brand-title h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
+
+    .brand-title p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .tag-companion {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(37, 99, 235, 0.1);
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      color: #2563eb;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    [data-theme="dark"] .tag-companion {
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.16s ease-in-out;
+      user-select: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0369a1, #075985);
+      transform: translateY(-1px);
+    }
+
+    .btn-demo {
+      background: linear-gradient(135deg, #d97706, #b45309);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+    }
+    .btn-demo:hover {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      border-color: var(--border-color);
+      color: var(--text-main);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-card-subtle);
+      border-color: #94a3b8;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #dc2626;
+    }
+    .btn-danger:hover {
+      background: #ef4444;
+      color: #fff;
+    }
+
+    .btn-sm {
+      padding: 5px 11px;
+      font-size: 0.76rem;
+    }
+
+    main {
+      padding: 18px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Metric Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-card);
+      transition: all 0.2s;
+    }
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: #cbd5e1;
+    }
+
+    .metric-info h3 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .metric-info .value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .metric-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .icon-blue { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
+    .icon-green { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+    .icon-red { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+    .icon-amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+
+    /* Demo Tour Banner */
+    #demoBanner {
+      display: none;
+      background: linear-gradient(90deg, #eff6ff 0%, #faf5ff 100%);
+      border: 1px solid #818cf8;
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.15);
+      animation: fadeIn 0.25s ease;
+    }
+    [data-theme="dark"] #demoBanner {
+      background: linear-gradient(90deg, #1e1b4b 0%, #0f172a 100%);
+      border-color: #6366f1;
+    }
+
+    .demo-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .demo-badge {
+      background: #4f46e5;
+      color: #ffffff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      margin-right: 8px;
+    }
+
+    .demo-step-text {
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+    .demo-step-text strong {
+      color: #4338ca;
+    }
+    [data-theme="dark"] .demo-step-text strong {
+      color: #a5b4fc;
+    }
+
+    .demo-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    /* Layout Split */
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 1fr 410px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 1250px) {
+      .dashboard-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* Graph Canvas Card */
+    .graph-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card-header {
+      padding: 13px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card-subtle);
+    }
+
+    .card-header h2 {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* BluePrint Canvas Background */
+    .graph-canvas-container {
+      position: relative;
+      width: 100%;
+      height: 500px;
+      background-color: var(--bg-blueprint);
+      background-image:
+        radial-gradient(circle at 68% 38%, rgba(56, 189, 248, 0.42) 0%, rgba(125, 211, 252, 0.25) 30%, transparent 65%),
+        radial-gradient(circle at 88% 58%, rgba(216, 180, 254, 0.38) 0%, rgba(233, 213, 255, 0.22) 35%, transparent 70%),
+        radial-gradient(circle at 50% 18%, rgba(186, 230, 253, 0.35) 0%, transparent 55%),
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      transition: background 0.3s;
+    }
+
+    svg#campusSvg {
+      width: 100%;
+      height: 100%;
+      user-select: none;
+    }
+
+    /* Graph SVG Elements */
+    .edge-line {
+      stroke-width: 3.5;
+      transition: stroke 0.2s, stroke-width 0.2s, filter 0.2s;
+      cursor: pointer;
+    }
+    .edge-line:hover {
+      stroke-width: 6;
+      filter: drop-shadow(0 0 10px currentColor);
+    }
+
+    .edge-working {
+      stroke: var(--color-working);
+      filter: drop-shadow(0 2px 4px var(--color-working-glow));
+    }
+    .edge-failed {
+      stroke: var(--color-failed);
+      filter: drop-shadow(0 2px 6px var(--color-failed-glow));
+    }
+    .edge-unavailable {
+      stroke: var(--color-unavailable);
+      stroke-dasharray: 6 5;
+      stroke-width: 2.5;
+    }
+    .edge-bfs {
+      stroke: var(--color-bfs);
+      stroke-width: 5.5;
+      filter: drop-shadow(0 0 12px var(--color-bfs-glow));
+      animation: pulseEdge 1.2s infinite;
+    }
+    .edge-prim-working {
+      stroke: var(--color-working);
+      stroke-width: 6;
+      filter: drop-shadow(0 0 12px var(--color-working-glow));
+    }
+    .edge-prim-repair {
+      stroke: var(--color-prim-repair);
+      stroke-width: 6.5;
+      filter: drop-shadow(0 0 14px var(--color-prim-glow));
+      animation: pulseEdge 1.5s infinite;
+    }
+
+    /* Edge Badges */
+    .edge-badge {
+      cursor: pointer;
+    }
+    .edge-badge rect {
+      fill: #ffffff;
+      stroke: #cbd5e1;
+      stroke-width: 1.5;
+      rx: 6;
+      filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.08));
+      transition: all 0.2s;
+    }
+    [data-theme="dark"] .edge-badge rect {
+      fill: #0f172a;
+      stroke: #334155;
+    }
+    .edge-badge:hover rect {
+      stroke: #0284c7;
+      fill: #f0f9ff;
+    }
+    [data-theme="dark"] .edge-badge:hover rect {
+      fill: #1e293b;
+    }
+    .edge-badge text {
+      fill: #0f172a;
+      font-size: 11px;
+      font-weight: 700;
+      text-anchor: middle;
+      dominant-baseline: central;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    [data-theme="dark"] .edge-badge text {
+      fill: #f1f5f9;
+    }
+
+    /* Edge Badge In-Tree States */
+    .edge-badge-prim-working rect {
+      fill: #ecfdf5;
+      stroke: #10b981;
+      stroke-width: 2;
+    }
+    [data-theme="dark"] .edge-badge-prim-working rect {
+      fill: #064e3b;
+      stroke: #34d399;
+    }
+    .edge-badge-prim-working text {
+      fill: #047857;
+      font-weight: 800;
+    }
+    [data-theme="dark"] .edge-badge-prim-working text {
+      fill: #a7f3d0;
+    }
+
+    .edge-badge-prim-repair rect {
+      fill: #fffbeb;
+      stroke: #f59e0b;
+      stroke-width: 2;
+    }
+    [data-theme="dark"] .edge-badge-prim-repair rect {
+      fill: #78350f;
+      stroke: #fbbf24;
+    }
+    .edge-badge-prim-repair text {
+      fill: #b45309;
+      font-weight: 800;
+    }
+    [data-theme="dark"] .edge-badge-prim-repair text {
+      fill: #fef3c7;
+    }
+
+    /* Nodes */
+    .node-group {
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .node-group:hover {
+      transform: scale(1.05);
+    }
+
+    .node-circle {
+      fill: var(--node-fill);
+      stroke: var(--node-stroke);
+      stroke-width: 3;
+      transition: all 0.25s ease;
+      filter: drop-shadow(0 4px 10px var(--node-shadow));
+    }
+
+    .node-bfs-visited {
+      stroke: var(--color-bfs);
+      fill: #e0f2fe;
+      stroke-width: 3.5;
+      filter: drop-shadow(0 0 16px var(--color-bfs-glow));
+      animation: pulseNode 1.5s infinite;
+    }
+    [data-theme="dark"] .node-bfs-visited {
+      fill: #0c3046;
+    }
+
+    .node-disconnected {
+      stroke: var(--color-failed);
+      fill: #ffe4e6;
+      stroke-width: 3.5;
+      filter: drop-shadow(0 0 16px var(--color-failed-glow));
+    }
+    [data-theme="dark"] .node-disconnected {
+      fill: #3b1219;
+    }
+
+    .node-prim-tree {
+      stroke: #2563eb;
+      fill: #eff6ff;
+      filter: drop-shadow(0 0 14px rgba(37, 99, 235, 0.45));
+    }
+    [data-theme="dark"] .node-prim-tree {
+      fill: #1e3a8a;
+      stroke: #60a5fa;
+    }
+
+    .node-id {
+      fill: var(--text-dim);
+      font-size: 10.5px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    .node-label {
+      fill: var(--text-main);
+      font-size: 11.5px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+
+    /* Graph Legend */
+    .graph-legend {
+      padding: 11px 20px;
+      background: var(--bg-card-subtle);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .legend-line {
+      width: 20px;
+      height: 4px;
+      border-radius: 2px;
+    }
+    .legend-line.working { background: var(--color-working); }
+    .legend-line.failed { background: var(--color-failed); }
+    .legend-line.unavailable { background: var(--color-unavailable); border-top: 2px dashed #94a3b8; height: 0; }
+    .legend-line.bfs { background: var(--color-bfs); }
+    .legend-line.prim-work { background: var(--color-working); height: 6px; box-shadow: 0 0 6px var(--color-working-glow); }
+    .legend-line.prim-rep { background: var(--color-prim-repair); height: 6px; box-shadow: 0 0 8px var(--color-prim-glow); }
+
+    /* DEDICATED PRIM RECOVERY PLAN PANEL */
+    .recovery-panel-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .status-pill {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .status-pill-neutral { background: rgba(100, 116, 139, 0.15); color: #64748b; }
+    .status-pill-calculating { background: rgba(2, 132, 199, 0.15); color: #0284c7; animation: pulseEdge 1s infinite; }
+    .status-pill-complete { background: rgba(16, 185, 129, 0.18); color: #059669; }
+    .status-pill-repaired { background: rgba(16, 185, 129, 0.25); color: #047857; box-shadow: 0 0 10px rgba(16, 185, 129, 0.35); }
+    [data-theme="dark"] .status-pill-repaired { background: rgba(16, 185, 129, 0.3); color: #34d399; }
+    .status-pill-impossible { background: rgba(239, 68, 68, 0.18); color: #dc2626; }
+
+    .recovery-summary-banner {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 14px 20px;
+      background: rgba(248, 250, 252, 0.7);
+      border-bottom: 1px solid var(--border-color);
+    }
+    [data-theme="dark"] .recovery-summary-banner {
+      background: rgba(15, 23, 42, 0.6);
+    }
+
+    .summary-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 14px;
+      text-align: center;
+    }
+    .summary-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 3px;
+    }
+    .summary-val {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+    .highlight-amber { color: #d97706; }
+    [data-theme="dark"] .highlight-amber { color: #fbbf24; }
+    .highlight-red { color: #dc2626; }
+    [data-theme="dark"] .highlight-red { color: #f87171; }
+    .highlight-blue { color: #0284c7; }
+    [data-theme="dark"] .highlight-blue { color: #38bdf8; }
+
+    .recovery-table-container {
+      max-height: 220px;
+      overflow-y: auto;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .recovery-note {
+      padding: 10px 20px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      background: var(--bg-card-subtle);
+      line-height: 1.45;
+    }
+
+    /* Recovery Action Bar (Prim Repair Execution) */
+    .recovery-action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 20px;
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, rgba(16, 185, 129, 0.08) 100%);
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      transition: all 0.25s ease;
+    }
+    [data-theme="dark"] .recovery-action-bar {
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, rgba(16, 185, 129, 0.12) 100%);
+    }
+
+    .recovery-action-bar.repaired-state {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%);
+    }
+
+    .recovery-action-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+      min-width: 240px;
+    }
+
+    .recovery-action-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #b45309;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    [data-theme="dark"] .recovery-action-badge {
+      color: #fbbf24;
+    }
+
+    .recovery-action-bar.repaired-state .recovery-action-badge {
+      color: #059669;
+    }
+    [data-theme="dark"] .recovery-action-bar.repaired-state .recovery-action-badge {
+      color: #34d399;
+    }
+
+    .recovery-action-text {
+      font-size: 0.82rem;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .btn-apply-repairs {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 18px;
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      color: #ffffff;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: 1px solid #059669;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-apply-repairs:hover:not(:disabled) {
+      background: linear-gradient(135deg, #047857 0%, #059669 100%);
+      box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .btn-apply-repairs:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn-apply-repairs:disabled {
+      background: #94a3b8;
+      border-color: #94a3b8;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+      opacity: 0.85;
+    }
+    [data-theme="dark"] .btn-apply-repairs:disabled {
+      background: #475569;
+      border-color: #475569;
+      color: #cbd5e1;
+    }
+
+    .btn-apply-repairs.btn-repaired-done {
+      background: #059669;
+      border-color: #059669;
+      opacity: 1;
+    }
+
+    /* Side Control Panel */
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .panel-card h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    select, input {
+      width: 100%;
+      background: var(--bg-blueprint);
+      border: 1px solid #cbd5e1;
+      color: var(--text-main);
+      padding: 8px 11px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    [data-theme="dark"] select, [data-theme="dark"] input {
+      border-color: #334155;
+    }
+    select:focus, input:focus {
+      border-color: var(--border-focus);
+    }
+
+    .radio-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .radio-option {
+      background: var(--bg-blueprint);
+      border: 1px solid #cbd5e1;
+      padding: 8px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.76rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    [data-theme="dark"] .radio-option {
+      border-color: #334155;
+    }
+    .radio-option:hover {
+      border-color: #94a3b8;
+      color: var(--text-main);
+    }
+    .radio-option.selected {
+      border-color: #0284c7;
+      background: rgba(2, 132, 199, 0.08);
+      color: #0284c7;
+      font-weight: 700;
+    }
+    .radio-option input {
+      display: none;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .btn-full {
+      width: 100%;
+    }
+
+    .algo-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .anim-controller-box {
+      background: var(--bg-card-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 11px 13px;
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .anim-status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.76rem;
+    }
+
+    .anim-status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .anim-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      transition: background 0.2s;
+    }
+    .dot-idle { background: #94a3b8; }
+    .dot-playing { background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulseDot 1s infinite; }
+    .dot-paused { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; animation: pulseDot 1s infinite; }
+    .dot-complete { background: #0284c7; }
+
+    .anim-speed-selector {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+
+    .speed-select {
+      padding: 3px 6px;
+      font-size: 0.72rem;
+      width: auto;
+      border-radius: 6px;
+    }
+
+    .anim-buttons-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .anim-toggle-btn {
+      flex: 1.2;
+      justify-content: center;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .anim-btn-resume {
+      background: linear-gradient(135deg, #059669, #10b981) !important;
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.45) !important;
+      color: #fff !important;
+      animation: pulseResume 1.6s infinite;
+    }
+
+    .anim-btn-pause-active {
+      background: linear-gradient(135deg, #d97706, #b45309) !important;
+      box-shadow: 0 0 12px rgba(217, 119, 6, 0.4) !important;
+      color: #fff !important;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+
+    @keyframes pulseResume {
+      0%, 100% { transform: translateY(0); box-shadow: 0 0 12px rgba(16, 185, 129, 0.45); }
+      50% { transform: translateY(-1px); box-shadow: 0 0 20px rgba(16, 185, 129, 0.8); }
+    }
+
+    /* Connections Table */
+    .table-container {
+      max-height: 180px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-blueprint);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.76rem;
+      text-align: left;
+    }
+    th {
+      background: var(--bg-card-subtle);
+      padding: 7px 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      border-bottom: 1px solid var(--border-color);
+      z-index: 2;
+    }
+    td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+    tr.selected-row td {
+      background: rgba(2, 132, 199, 0.1);
+      font-weight: 600;
+    }
+    tr:hover td {
+      background: rgba(2, 132, 199, 0.05);
+      cursor: pointer;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+    .badge-working { background: rgba(16, 185, 129, 0.15); color: #059669; }
+    .badge-failed { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
+    .badge-unavailable { background: rgba(100, 116, 139, 0.18); color: #64748b; }
+    .badge-tree-work { background: rgba(16, 185, 129, 0.2); color: #059669; border: 1px solid #10b981; }
+    .badge-tree-rep { background: rgba(245, 158, 11, 0.25); color: #b45309; border: 1px solid #f59e0b; }
+    [data-theme="dark"] .badge-tree-rep { color: #fbbf24; }
+
+    /* Activity Console Log */
+    .console-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+    }
+
+    .console-header {
+      padding: 9px 18px;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #94a3b8;
+    }
+    .console-header h3 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .console-body {
+      height: 130px;
+      overflow-y: auto;
+      padding: 10px 16px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      background: #0b1120;
+    }
+
+    .log-line {
+      margin-bottom: 4px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .log-time {
+      color: #64748b;
+      font-size: 0.7rem;
+      min-width: 55px;
+    }
+    .log-tag {
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .tag-sys { background: #334155; color: #cbd5e1; }
+    .tag-bfs { background: rgba(2, 132, 199, 0.25); color: #38bdf8; }
+    .tag-prim { background: rgba(14, 165, 233, 0.25); color: #7dd3fc; }
+    .tag-fail { background: rgba(239, 68, 68, 0.25); color: #f87171; }
+    .tag-succ { background: rgba(16, 185, 129, 0.25); color: #34d399; }
+    .tag-demo { background: rgba(245, 158, 11, 0.25); color: #fbbf24; }
+
+    .log-msg {
+      color: #e2e8f0;
+      flex: 1;
+    }
+
+    /* Keyframes */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulseNode {
+      0%, 100% { filter: drop-shadow(0 0 8px var(--color-bfs-glow)); }
+      50% { filter: drop-shadow(0 0 20px rgba(2, 132, 199, 0.85)); }
+    }
+
+    @keyframes pulseEdge {
+      0%, 100% { stroke-opacity: 1; }
+      50% { stroke-opacity: 0.5; }
+    }
+  </style>
+</head>
+<body data-theme="light">
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="6" cy="6" r="3"></circle>
+          <circle cx="18" cy="6" r="3"></circle>
+          <circle cx="18" cy="18" r="3"></circle>
+          <circle cx="6" cy="18" r="3"></circle>
+          <line x1="9" y1="6" x2="15" y2="6"></line>
+          <line x1="18" y1="9" x2="18" y2="15"></line>
+          <line x1="15" y1="18" x2="9" y2="18"></line>
+          <line x1="6" y1="15" x2="6" y2="9"></line>
+        </svg>
+      </div>
+      <div class="brand-title">
+        <h1>Blackout Atlas — Visual Simulator</h1>
+        <p>Campus Network Failure Diagnosis & Prim MST Recovery Platform</p>
+      </div>
+      <span class="tag-companion">C++ Companion Visualizer</span>
+    </div>
+
+    <div class="header-actions">
+      <!-- Theme Switcher -->
+      <button class="btn btn-secondary" id="btnToggleTheme" title="Toggle Blueprint / Dark Mode">
+        <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <span id="themeText">Dark Theme</span>
+      </button>
+
+      <button class="btn btn-demo" id="btnDemoScenario">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Demo Scenario (Section 11)
+      </button>
+      <button class="btn btn-secondary" id="btnResetAll">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+        Reset Network
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Metric Cards -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-info">
+          <h3>Campus Buildings</h3>
+          <div class="value" id="valTotalNodes">6</div>
+        </div>
+        <div class="metric-icon icon-blue">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="9" y1="22" x2="9" y2="18"></line><line x1="15" y1="22" x2="15" y2="18"></line><line x1="8" y1="6" x2="10" y2="6"></line><line x1="14" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="10" y2="10"></line><line x1="14" y1="10" x2="16" y2="10"></line></svg>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-info">
+          <h3>Failed Connections</h3>
+          <div class="value" id="valFailedLinks">0</div>
+        </div>
+        <div class="metric-icon icon-red">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-info">
+          <h3>Disconnected Buildings</h3>
+          <div class="value" id="valDisconnected">0</div>
+        </div>
+        <div class="metric-icon icon-amber">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-info">
+          <h3>Prim Recovery Cost</h3>
+          <div class="value" id="valRecoveryCost">—</div>
+        </div>
+        <div class="metric-icon icon-green">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- Guided Demo Banner -->
+    <div id="demoBanner">
+      <div class="demo-content">
+        <div>
+          <span class="demo-badge">Section 11 Demo</span>
+          <span class="demo-step-text" id="demoStepText">Step 1: Network reset to pristine fully working state.</span>
+        </div>
+        <div class="demo-actions">
+          <button class="btn btn-secondary btn-sm" id="btnDemoPrev">Previous</button>
+          <button class="btn btn-primary btn-sm" id="btnDemoNext">Next Step</button>
+          <button class="btn btn-danger btn-sm" id="btnDemoExit">Exit Demo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="dashboard-layout">
+      <!-- Left Column: Graph Canvas + Dedicated Prim Recovery Panel -->
+      <div class="left-column">
+        <!-- Interactive Canvas Card -->
+        <section class="graph-card">
+          <div class="card-header">
+            <h2>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+              Campus Network Topology
+            </h2>
+            <div style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">
+              Click any connection or building node to interact
+            </div>
+          </div>
+
+          <div class="graph-canvas-container">
+            <svg id="campusSvg" viewBox="0 0 780 490">
+              <!-- Edge Lines Layer -->
+              <g id="edgesLayer"></g>
+              <!-- Edge Badges Layer -->
+              <g id="edgeBadgesLayer"></g>
+              <!-- Nodes Layer -->
+              <g id="nodesLayer"></g>
+            </svg>
+          </div>
+
+          <!-- Legend -->
+          <div class="graph-legend">
+            <div class="legend-item">
+              <span class="legend-line working"></span> Working
+            </div>
+            <div class="legend-item">
+              <span class="legend-line failed"></span> Failed (Repairable)
+            </div>
+            <div class="legend-item">
+              <span class="legend-line unavailable"></span> Unavailable
+            </div>
+            <div class="legend-item">
+              <span class="legend-line bfs"></span> BFS Traversed
+            </div>
+            <div class="legend-item">
+              <span class="legend-line prim-work"></span> Prim Working (Tree)
+            </div>
+            <div class="legend-item">
+              <span class="legend-line prim-rep"></span> Prim Repair Selected
+            </div>
+          </div>
+        </section>
+
+        <!-- DEDICATED PRIM RECOVERY PLAN PANEL -->
+        <section class="recovery-panel-card">
+          <div class="card-header">
+            <h2>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              Prim's Minimum Spanning Tree — Recovery Plan
+            </h2>
+            <span class="status-pill status-pill-neutral" id="primStatusPill">STATUS: NOT CALCULATED</span>
+          </div>
+
+          <!-- Summary Highlights Banner -->
+          <div class="recovery-summary-banner" id="recoverySummaryBanner">
+            <div class="summary-box">
+              <div class="summary-label">MINIMUM RECOVERY COST</div>
+              <div class="summary-val highlight-amber" id="primBannerCost">—</div>
+            </div>
+            <div class="summary-box">
+              <div class="summary-label">REPAIRS REQUIRED</div>
+              <div class="summary-val highlight-red" id="primBannerRepairs">—</div>
+            </div>
+            <div class="summary-box">
+              <div class="summary-label">TREE EDGES SELECTED</div>
+              <div class="summary-val highlight-blue" id="primBannerEdges">—</div>
+            </div>
+          </div>
+
+          <!-- Interactive Prim Repair Action Bar -->
+          <div class="recovery-action-bar" id="recoveryActionBar" style="display: none;">
+            <div class="recovery-action-info">
+              <div class="recovery-action-badge" id="recoveryActionBadge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>RECOMMENDED ACTION</span>
+              </div>
+              <div class="recovery-action-text" id="recoveryActionText">
+                Prim's MST identified broken connections to restore.
+              </div>
+            </div>
+            <button class="btn btn-apply-repairs" id="btnApplyRepairs" title="Restore recommended links and verify network connectivity">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+              </svg>
+              <span>Restore & Repair Links</span>
+            </button>
+          </div>
+
+          <!-- Edge Breakdown Table -->
+          <div class="recovery-table-container">
+            <table id="primTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Connection Endpoints</th>
+                  <th>Original Cost</th>
+                  <th>Spanning Tree Role</th>
+                  <th>Additional Cost</th>
+                  <th>Cumulative Cost</th>
+                </tr>
+              </thead>
+              <tbody id="primTableBody">
+                <tr>
+                  <td colspan="6" style="text-align:center; padding: 22px; color: var(--text-dim); font-size: 0.8rem;">
+                    Recovery plan not yet calculated. Click <strong>"Calculate Recovery Plan (Prim)"</strong> or run the <strong>Demo Scenario</strong> to evaluate minimum-cost spanning tree.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="recovery-note" id="primRecoveryNote">
+            Prim's algorithm finds the minimum-cost set of connections to connect all buildings. Working links have 0 additional cost; failed repairable links contribute their original cost. Unavailable links are strictly omitted.
+          </div>
+        </section>
+      </div>
+
+      <!-- Right Column: Control Center -->
+      <aside class="control-panel">
+        <!-- Simulation Control Card -->
+        <div class="panel-card">
+          <h3>Connection Operations</h3>
+
+          <div class="form-group">
+            <label for="selectEdge">Select Target Connection</label>
+            <select id="selectEdge"></select>
+          </div>
+
+          <div class="form-group">
+            <label>Failure Mode</label>
+            <div class="radio-group">
+              <label class="radio-option selected" id="optRepairable">
+                <input type="radio" name="failMode" value="1" checked>
+                <span>Repairable</span>
+              </label>
+              <label class="radio-option" id="optUnavailable">
+                <input type="radio" name="failMode" value="2">
+                <span>Unavailable</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="btn-grid">
+            <button class="btn btn-danger" id="btnFailEdge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+              Fail Link
+            </button>
+            <button class="btn btn-secondary" id="btnRestoreEdge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>
+              Restore Link
+            </button>
+          </div>
+        </div>
+
+        <!-- Algorithm Diagnostics Card -->
+        <div class="panel-card">
+          <h3>Algorithm Execution</h3>
+          <div class="algo-actions">
+            <button class="btn btn-primary btn-full" id="btnRunBFS">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              Diagnose Network (BFS)
+            </button>
+            <button class="btn btn-secondary btn-full" id="btnRunPrim">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              Calculate Recovery Plan (Prim)
+            </button>
+            <button class="btn btn-apply-repairs btn-full" id="btnSideApplyRepairs" style="display: none;" title="Apply recommended Prim repairs">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+              <span>Restore & Repair Links</span>
+            </button>
+          </div>
+
+          <div class="anim-controller-box">
+            <div class="anim-status-row">
+              <div class="anim-status-indicator" id="animStatusIndicator">
+                <span class="anim-dot dot-idle" id="animDot"></span>
+                <span class="anim-status-text" id="animStatusText">Ready / Idle</span>
+              </div>
+              <div class="anim-speed-selector">
+                <label for="selectSpeed">Speed:</label>
+                <select id="selectSpeed" class="speed-select">
+                  <option value="1200">0.5x Slow</option>
+                  <option value="750" selected>1.0x Normal</option>
+                  <option value="350">2.0x Fast</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="anim-buttons-row">
+              <button class="btn btn-primary btn-sm anim-toggle-btn" id="btnPlayPause">
+                <svg id="playPauseIcon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span id="playPauseText">Play Animation</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnStepNext" title="Advance one step">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                  <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="3"></line>
+                </svg>
+                Step
+              </button>
+              <button class="btn btn-secondary btn-sm" id="btnStopAnim" title="Stop and reset animation">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="5" y="5" width="14" height="14"></rect>
+                </svg>
+                Stop
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connection State Table -->
+        <div class="panel-card" style="padding-bottom: 10px;">
+          <h3>Connection Directory</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Endpoints</th>
+                  <th>Cost</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Bottom: Live Activity Log -->
+    <section class="console-card">
+      <div class="console-header">
+        <h3>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          Simulator Activity & Execution Log
+        </h3>
+        <button class="btn btn-secondary btn-sm" id="btnClearLog" style="background:#334155;color:#f8fafc;border:none;">Clear Log</button>
+      </div>
+      <div class="console-body" id="consoleBody"></div>
+    </section>
+  </main>
+
+  <script>
+    // Exact Campus Graph Data
+    const BUILDINGS = [
+      { id: 0, name: "Main Block", x: 130, y: 150 },
+      { id: 1, name: "Library", x: 390, y: 80 },
+      { id: 2, name: "Computer Lab", x: 650, y: 150 },
+      { id: 3, name: "Hostel", x: 660, y: 390 },
+      { id: 4, name: "Administration", x: 230, y: 390 },
+      { id: 5, name: "Medical Centre", x: 450, y: 440 }
+    ];
+
+    const CONNECTIONS = [
+      { id: 1, u: 0, v: 1, cost: 4, labelOffset: { dx: 0, dy: -16 } },
+      { id: 2, u: 0, v: 4, cost: 3, labelOffset: { dx: -24, dy: 0 } },
+      { id: 3, u: 1, v: 2, cost: 2, labelOffset: { dx: 0, dy: -16 } },
+      { id: 4, u: 1, v: 4, cost: 5, labelOffset: { dx: -22, dy: -8 } },
+      { id: 5, u: 2, v: 3, cost: 4, labelOffset: { dx: 24, dy: 0 } },
+      { id: 6, u: 3, v: 5, cost: 3, labelOffset: { dx: 18, dy: 16 } },
+      { id: 7, u: 4, v: 5, cost: 6, labelOffset: { dx: -18, dy: 16 } },
+      { id: 8, u: 2, v: 4, cost: 2, labelOffset: { dx: 0, dy: -14 } }
+    ];
+
+    // Graph Status: 0 = Working, 1 = Failed (repairable), 2 = Unavailable
+    let edgeStatus = {};
+    let selectedEdgeId = 1;
+
+    // Visual Highlighting:
+    // edgeHighlight[id]: 'none' | 'bfs' | 'prim-working' | 'prim-repair'
+    let edgeHighlight = {};
+    // nodeState[id]: 'default' | 'bfs-visited' | 'disconnected' | 'prim-tree'
+    let nodeState = {};
+
+    // Prim's Calculated Plan State
+    let primResult = {
+      calculated: false,
+      possible: false,
+      treeEdges: [],
+      totalRecoveryCost: 0,
+      repairCount: 0
+    };
+    let primRepaired = false;
+
+    // Robust Animation Controller
+    const AnimController = {
+      activeType: null, // 'bfs' or 'prim'
+      steps: [],
+      currentStepIndex: 0,
+      onComplete: null,
+      timer: null,
+      isPaused: false,
+      isRunning: false,
+      delay: 750, // Comfortable viewing speed
+
+      updateUI() {
+        const btn = document.getElementById("btnPlayPause");
+        const icon = document.getElementById("playPauseIcon");
+        const text = document.getElementById("playPauseText");
+        const statusText = document.getElementById("animStatusText");
+        const dot = document.getElementById("animDot");
+
+        if (!btn || !icon || !text || !statusText || !dot) return;
+
+        if (this.isRunning && !this.isPaused) {
+          // Playing state
+          btn.className = "btn btn-demo btn-sm anim-toggle-btn anim-btn-pause-active";
+          text.textContent = "Pause";
+          icon.innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+          dot.className = "anim-dot dot-playing";
+          const total = this.steps.length;
+          const cur = Math.min(this.currentStepIndex + 1, total);
+          statusText.textContent = `Playing: ${this.activeType ? this.activeType.toUpperCase() : ''} (${cur}/${total})`;
+        } else if (this.isRunning && this.isPaused) {
+          // Paused state
+          btn.className = "btn btn-primary btn-sm anim-toggle-btn anim-btn-resume";
+          text.textContent = "Resume";
+          icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+          dot.className = "anim-dot dot-paused";
+          const total = this.steps.length;
+          const cur = this.currentStepIndex;
+          statusText.textContent = `Paused: ${this.activeType ? this.activeType.toUpperCase() : ''} (${cur}/${total})`;
+        } else {
+          // Idle state
+          btn.className = "btn btn-primary btn-sm anim-toggle-btn";
+          text.textContent = "Play Animation";
+          icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+          dot.className = "anim-dot dot-idle";
+          statusText.textContent = "Ready / Idle";
+        }
+      },
+
+      start(type, steps, onComplete) {
+        this.stop();
+        this.activeType = type;
+        this.steps = steps;
+        this.currentStepIndex = 0;
+        this.onComplete = onComplete;
+        this.isPaused = false;
+        this.isRunning = true;
+        this.updateUI();
+        this.tick();
+      },
+
+      tick() {
+        if (!this.isRunning || this.isPaused) return;
+        if (this.currentStepIndex >= this.steps.length) {
+          this.finish();
+          return;
+        }
+
+        const step = this.steps[this.currentStepIndex++];
+        this.executeStep(step);
+        this.updateUI();
+
+        this.timer = setTimeout(() => {
+          this.tick();
+        }, this.delay);
+      },
+
+      executeStep(step) {
+        if (this.activeType === 'bfs') {
+          if (step.type === 'node') {
+            nodeState[step.id] = 'bfs-visited';
+          } else if (step.type === 'edge') {
+            edgeHighlight[step.id] = 'bfs';
+          }
+          updateVisuals();
+        } else if (this.activeType === 'prim') {
+          const e = step.edge;
+          edgeHighlight[e.id] = step.isRepair ? 'prim-repair' : 'prim-working';
+          nodeState[step.u] = 'prim-tree';
+          nodeState[step.v] = 'prim-tree';
+          updateVisuals();
+
+          // Update recovery panel running rows and totals
+          addPrimTableRow(step);
+          document.getElementById("primBannerCost").textContent = step.cumulativeCost + " UNITS";
+          document.getElementById("primBannerRepairs").textContent = step.cumulativeRepairs;
+          document.getElementById("primBannerEdges").textContent = step.stepNumber + " / 5";
+          document.getElementById("valRecoveryCost").textContent = step.cumulativeCost;
+
+          const statText = step.isRepair ? `NEEDS REPAIR (+${step.additionalCost})` : `WORKING (+0)`;
+          log("prim", `Prim Step ${step.stepNumber}/5: Selected Connection [#${e.id}] ${BUILDINGS[step.u].name} — ${BUILDINGS[step.v].name} | ${statText} | Running Total: ${step.cumulativeCost}`);
+        }
+      },
+
+      pause() {
+        if (!this.isRunning) {
+          log("sys", "No animation currently active. Click 'Diagnose (BFS)', 'Calculate (Prim)', or 'Play Animation'.");
+          return;
+        }
+        this.isPaused = true;
+        if (this.timer) {
+          clearTimeout(this.timer);
+          this.timer = null;
+        }
+        this.updateUI();
+        log("sys", `Animation paused at step ${this.currentStepIndex}/${this.steps.length}. Click 'Resume' to continue or 'Step' to advance one step.`);
+      },
+
+      resume() {
+        if (!this.isRunning || !this.isPaused) return;
+        this.isPaused = false;
+        this.updateUI();
+        log("sys", `Resuming ${this.activeType.toUpperCase()} animation from step ${this.currentStepIndex + 1}/${this.steps.length}...`);
+        this.tick();
+      },
+
+      stepNext() {
+        if (!this.isRunning) {
+          // If idle, initialize Prim or BFS in paused mode so user can step through!
+          if (!primResult.calculated) {
+            runPrim(true);
+          } else {
+            runBFS(true);
+          }
+          this.pause();
+          return;
+        }
+
+        if (!this.isPaused) {
+          this.pause();
+        }
+
+        if (this.currentStepIndex >= this.steps.length) {
+          this.finish();
+          return;
+        }
+
+        const step = this.steps[this.currentStepIndex++];
+        this.executeStep(step);
+        this.updateUI();
+
+        if (this.currentStepIndex >= this.steps.length) {
+          this.finish();
+        }
+      },
+
+      stop() {
+        if (this.timer) {
+          clearTimeout(this.timer);
+          this.timer = null;
+        }
+        this.activeType = null;
+        this.steps = [];
+        this.currentStepIndex = 0;
+        this.onComplete = null;
+        this.isPaused = false;
+        this.isRunning = false;
+        this.updateUI();
+      },
+
+      finish() {
+        const cb = this.onComplete;
+        this.stop();
+        const dot = document.getElementById("animDot");
+        const statusText = document.getElementById("animStatusText");
+        if (dot) dot.className = "anim-dot dot-complete";
+        if (statusText) statusText.textContent = "Complete";
+        if (cb) cb();
+      }
+    };
+
+    // Deterministic Demo Scenario Snapshots
+    let demoActive = false;
+    let demoStep = 0;
+
+    const DEMO_SNAPSHOTS = [
+      {
+        step: 1,
+        text: "Step 1: Network reset to pristine state. All 8 connections working.",
+        edges: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 },
+        runAction: () => { clearHighlights(); invalidatePrim(); }
+      },
+      {
+        step: 2,
+        text: "Step 2: Mark Connection 4 (Library — Administration) as Failed (repairable).",
+        edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0, 7: 0, 8: 0 },
+        runAction: () => { clearHighlights(); invalidatePrim(); }
+      },
+      {
+        step: 3,
+        text: "Step 3: Mark Connection 7 (Administration — Medical Centre) as Failed (repairable).",
+        edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0, 7: 1, 8: 0 },
+        runAction: () => { clearHighlights(); invalidatePrim(); }
+      },
+      {
+        step: 4,
+        text: "Step 4: Run BFS Diagnosis. All 6 buildings remain reachable through alternate working paths.",
+        edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0, 7: 1, 8: 0 },
+        runAction: () => { runBFS(false); invalidatePrim(); }
+      },
+      {
+        step: 5,
+        text: "Step 5: Mark Connection 6 (Hostel — Medical Centre) as Failed (repairable).",
+        edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 1, 7: 1, 8: 0 },
+        runAction: () => { clearHighlights(); invalidatePrim(); }
+      },
+      {
+        step: 6,
+        text: "Step 6: Run BFS Diagnosis. Medical Centre is now isolated from Main Block!",
+        edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 1, 7: 1, 8: 0 },
+        runAction: () => { runBFS(false); invalidatePrim(); }
+      },
+      {
+        step: 7,
+        text: "Step 7: Run Prim MST Recovery Plan. Picks 4 working links and repairs Connection 6 (cost 3 vs 6). Minimum Cost: 3.",
+        edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 1, 7: 1, 8: 0 },
+        runAction: () => { runPrim(false); }
+      },
+      {
+        step: 8,
+        text: "Step 8: Restore Connection 6 (Hostel — Medical Centre) and run BFS. All buildings reachable again!",
+        edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0, 7: 1, 8: 0 },
+        runAction: () => { runBFS(false); invalidatePrim(); }
+      }
+    ];
+
+    function init() {
+      CONNECTIONS.forEach(e => {
+        edgeStatus[e.id] = 0;
+        edgeHighlight[e.id] = 'none';
+      });
+      BUILDINGS.forEach(b => {
+        nodeState[b.id] = 'default';
+      });
+
+      renderSVG();
+      populateDropdown();
+      updateTable();
+      updateMetrics();
+      setupEvents();
+      invalidatePrim();
+      AnimController.updateUI();
+      log("sys", "Blackout Atlas Visual Simulator initialized. All 6 buildings & 8 links loaded.");
+    }
+
+    // SVG Rendering with Clear Geometry and Readable Full Labels
+    function renderSVG() {
+      const edgesLayer = document.getElementById("edgesLayer");
+      const edgeBadgesLayer = document.getElementById("edgeBadgesLayer");
+      const nodesLayer = document.getElementById("nodesLayer");
+
+      edgesLayer.innerHTML = "";
+      edgeBadgesLayer.innerHTML = "";
+      nodesLayer.innerHTML = "";
+
+      // 1. Render Edges
+      CONNECTIONS.forEach(e => {
+        const uNode = BUILDINGS[e.u];
+        const vNode = BUILDINGS[e.v];
+
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", uNode.x);
+        line.setAttribute("y1", uNode.y);
+        line.setAttribute("x2", vNode.x);
+        line.setAttribute("y2", vNode.y);
+        line.setAttribute("id", `edge-line-${e.id}`);
+        line.setAttribute("class", getEdgeClass(e.id));
+        line.onclick = () => selectEdgeInUI(e.id);
+        edgesLayer.appendChild(line);
+
+        // Edge Badges (ID + Cost)
+        const mx = (uNode.x + vNode.x) / 2 + (e.labelOffset?.dx || 0);
+        const my = (uNode.y + vNode.y) / 2 + (e.labelOffset?.dy || 0);
+
+        const badgeG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        badgeG.setAttribute("class", getBadgeClass(e.id));
+        badgeG.setAttribute("id", `edge-badge-${e.id}`);
+        badgeG.onclick = () => selectEdgeInUI(e.id);
+
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", mx - 28);
+        rect.setAttribute("y", my - 13);
+        rect.setAttribute("width", 56);
+        rect.setAttribute("height", 26);
+        rect.setAttribute("id", `badge-rect-${e.id}`);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", mx);
+        text.setAttribute("y", my);
+        text.setAttribute("id", `badge-text-${e.id}`);
+        text.textContent = getBadgeText(e.id);
+
+        badgeG.appendChild(rect);
+        badgeG.appendChild(text);
+        edgeBadgesLayer.appendChild(badgeG);
+      });
+
+      // 2. Render Nodes
+      BUILDINGS.forEach(b => {
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("class", "node-group");
+        g.setAttribute("id", `node-group-${b.id}`);
+        g.onclick = () => log("sys", `Building [${b.id}]: ${b.name}`);
+
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", b.x);
+        circle.setAttribute("cy", b.y);
+        circle.setAttribute("r", 34);
+        circle.setAttribute("class", getNodeClass(b.id));
+        circle.setAttribute("id", `node-circle-${b.id}`);
+
+        // Node ID
+        const idText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        idText.setAttribute("x", b.x);
+        idText.setAttribute("y", b.y - 12);
+        idText.setAttribute("class", "node-id");
+        idText.textContent = `[${b.id}]`;
+
+        // Node Label split for clear fitting inside the circle
+        const nameText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        nameText.setAttribute("x", b.x);
+        nameText.setAttribute("y", b.y + 2);
+        nameText.setAttribute("class", "node-label");
+
+        const parts = b.name.split(" ");
+        if (parts.length === 1) {
+          nameText.textContent = parts[0];
+          nameText.setAttribute("y", b.y + 8);
+        } else {
+          nameText.innerHTML = `
+            <tspan x="${b.x}" dy="2">${parts[0]}</tspan>
+            <tspan x="${b.x}" dy="14">${parts[1]}</tspan>
+          `;
+        }
+
+        const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        title.textContent = `Building ${b.id}: ${b.name}`;
+        g.appendChild(title);
+
+        g.appendChild(circle);
+        g.appendChild(idText);
+        g.appendChild(nameText);
+        nodesLayer.appendChild(g);
+      });
+    }
+
+    function getEdgeClass(id) {
+      const hl = edgeHighlight[id];
+      if (hl === 'bfs') return 'edge-line edge-bfs';
+      if (hl === 'prim-working') return 'edge-line edge-prim-working';
+      if (hl === 'prim-repair') return 'edge-line edge-prim-repair';
+
+      const st = edgeStatus[id];
+      if (st === 0) return 'edge-line edge-working';
+      if (st === 1) return 'edge-line edge-failed';
+      return 'edge-line edge-unavailable';
+    }
+
+    function getBadgeClass(id) {
+      const hl = edgeHighlight[id];
+      if (hl === 'prim-working') return 'edge-badge edge-badge-prim-working';
+      if (hl === 'prim-repair') return 'edge-badge edge-badge-prim-repair';
+      return 'edge-badge';
+    }
+
+    function getBadgeText(id) {
+      const e = CONNECTIONS[id - 1];
+      const hl = edgeHighlight[id];
+      if (hl === 'prim-working') return `#${e.id} | c:0`;
+      if (hl === 'prim-repair') return `#${e.id} | +${e.cost}`;
+      return `#${e.id} | c:${e.cost}`;
+    }
+
+    function getNodeClass(id) {
+      const st = nodeState[id];
+      if (st === 'bfs-visited') return 'node-circle node-bfs-visited';
+      if (st === 'disconnected') return 'node-circle node-disconnected';
+      if (st === 'prim-tree') return 'node-circle node-prim-tree';
+      return 'node-circle';
+    }
+
+    function updateVisuals() {
+      CONNECTIONS.forEach(e => {
+        const line = document.getElementById(`edge-line-${e.id}`);
+        if (line) line.setAttribute("class", getEdgeClass(e.id));
+
+        const badgeG = document.getElementById(`edge-badge-${e.id}`);
+        if (badgeG) badgeG.setAttribute("class", getBadgeClass(e.id));
+
+        const badgeText = document.getElementById(`badge-text-${e.id}`);
+        if (badgeText) badgeText.textContent = getBadgeText(e.id);
+      });
+
+      BUILDINGS.forEach(b => {
+        const circle = document.getElementById(`node-circle-${b.id}`);
+        if (circle) circle.setAttribute("class", getNodeClass(b.id));
+      });
+
+      updateTable();
+      updateMetrics();
+    }
+
+    function populateDropdown() {
+      const select = document.getElementById("selectEdge");
+      select.innerHTML = "";
+      CONNECTIONS.forEach(e => {
+        const opt = document.createElement("option");
+        opt.value = e.id;
+        opt.textContent = `[#${e.id}] ${BUILDINGS[e.u].name} — ${BUILDINGS[e.v].name} (Cost: ${e.cost})`;
+        select.appendChild(opt);
+      });
+      select.value = selectedEdgeId;
+    }
+
+    function selectEdgeInUI(id) {
+      selectedEdgeId = id;
+      document.getElementById("selectEdge").value = id;
+      updateTableSelection();
+      log("sys", `Selected Connection [#${id}] ${BUILDINGS[CONNECTIONS[id-1].u].name} — ${BUILDINGS[CONNECTIONS[id-1].v].name}`);
+    }
+
+    function updateTable() {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+      CONNECTIONS.forEach(e => {
+        const tr = document.createElement("tr");
+        if (e.id === selectedEdgeId) tr.className = "selected-row";
+        tr.onclick = () => selectEdgeInUI(e.id);
+
+        const st = edgeStatus[e.id];
+        let badgeHtml = '<span class="badge badge-working">Working</span>';
+        if (st === 1) badgeHtml = '<span class="badge badge-failed">Failed (Rep)</span>';
+        if (st === 2) badgeHtml = '<span class="badge badge-unavailable">Unavailable</span>';
+
+        tr.innerHTML = `
+          <td><strong>#${e.id}</strong></td>
+          <td>${BUILDINGS[e.u].name} — ${BUILDINGS[e.v].name}</td>
+          <td>${e.cost}</td>
+          <td>${badgeHtml}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateTableSelection() {
+      const rows = document.querySelectorAll("#tableBody tr");
+      rows.forEach((r, idx) => {
+        if (idx + 1 === selectedEdgeId) {
+          r.classList.add("selected-row");
+        } else {
+          r.classList.remove("selected-row");
+        }
+      });
+    }
+
+    // Dynamic Reachability Analysis on Current Working Graph
+    function calculateWorkingReachability() {
+      const vis = new Array(BUILDINGS.length).fill(false);
+      const q = [0];
+      vis[0] = true;
+
+      while (q.length > 0) {
+        const u = q.shift();
+        CONNECTIONS.forEach(e => {
+          if (edgeStatus[e.id] === 0) {
+            let v = -1;
+            if (e.u === u) v = e.v;
+            else if (e.v === u) v = e.u;
+
+            if (v !== -1 && !vis[v]) {
+              vis[v] = true;
+              q.push(v);
+            }
+          }
+        });
+      }
+
+      let disconnectedCount = 0;
+      for (let i = 0; i < BUILDINGS.length; i++) {
+        if (!vis[i]) disconnectedCount++;
+      }
+      return { vis, disconnectedCount };
+    }
+
+    // Metrics Dashboard State Management
+    function updateMetrics() {
+      // 1. Total nodes
+      document.getElementById("valTotalNodes").textContent = BUILDINGS.length;
+
+      // 2. Failed Links (all non-working links)
+      let failed = 0;
+      CONNECTIONS.forEach(e => {
+        if (edgeStatus[e.id] !== 0) failed++;
+      });
+      document.getElementById("valFailedLinks").textContent = failed;
+
+      // 3. Disconnected Buildings (reflects current working reachability from Main Block)
+      const { disconnectedCount } = calculateWorkingReachability();
+      document.getElementById("valDisconnected").textContent = disconnectedCount;
+
+      // 4. Recovery Cost Metric
+      const valRecElem = document.getElementById("valRecoveryCost");
+      if (primRepaired) {
+        valRecElem.textContent = "0 (Restored)";
+      } else if (!primResult.calculated) {
+        valRecElem.textContent = "—";
+      } else if (!primResult.possible) {
+        valRecElem.textContent = "Impossible";
+      } else {
+        valRecElem.textContent = primResult.totalRecoveryCost;
+      }
+    }
+
+    function setEdgeStatus(id, newStatus) {
+      AnimController.stop();
+      edgeStatus[id] = newStatus;
+      clearHighlights();
+      invalidatePrim();
+      updateVisuals();
+
+      const e = CONNECTIONS[id - 1];
+      const uName = BUILDINGS[e.u].name;
+      const vName = BUILDINGS[e.v].name;
+      const stName = newStatus === 0 ? "Working" : (newStatus === 1 ? "Failed (Repairable)" : "Unavailable");
+      const tag = newStatus === 0 ? "succ" : "fail";
+      log(tag, `Connection [#${id}] ${uName} — ${vName} updated to ${stName}.`);
+    }
+
+    function clearHighlights() {
+      CONNECTIONS.forEach(e => edgeHighlight[e.id] = 'none');
+      BUILDINGS.forEach(b => nodeState[b.id] = 'default');
+      updateVisuals();
+    }
+
+    function invalidatePrim() {
+      primRepaired = false;
+      primResult = {
+        calculated: false,
+        possible: false,
+        treeEdges: [],
+        totalRecoveryCost: 0,
+        repairCount: 0
+      };
+
+      document.getElementById("primStatusPill").className = "status-pill status-pill-neutral";
+      document.getElementById("primStatusPill").textContent = "STATUS: NOT CALCULATED";
+      document.getElementById("primBannerCost").textContent = "—";
+      document.getElementById("primBannerRepairs").textContent = "—";
+      document.getElementById("primBannerEdges").textContent = "—";
+
+      const actionBar = document.getElementById("recoveryActionBar");
+      if (actionBar) {
+        actionBar.style.display = "none";
+        actionBar.className = "recovery-action-bar";
+      }
+      const sideBtn = document.getElementById("btnSideApplyRepairs");
+      if (sideBtn) {
+        sideBtn.style.display = "none";
+      }
+
+      const tbody = document.getElementById("primTableBody");
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; padding: 22px; color: var(--text-dim); font-size: 0.8rem;">
+            Recovery plan not yet calculated. Click <strong>"Calculate Recovery Plan (Prim)"</strong> or run the <strong>Demo Scenario</strong> to evaluate minimum-cost spanning tree.
+          </td>
+        </tr>
+      `;
+      document.getElementById("primRecoveryNote").innerHTML = `
+        Prim's algorithm finds the minimum-cost set of connections to connect all buildings. Working links have 0 additional cost; failed repairable links contribute their original cost. Unavailable links are strictly omitted.
+      `;
+      updateMetrics();
+    }
+
+    function resetNetwork() {
+      AnimController.stop();
+      CONNECTIONS.forEach(e => {
+        edgeStatus[e.id] = 0;
+        edgeHighlight[e.id] = 'none';
+      });
+      BUILDINGS.forEach(b => nodeState[b.id] = 'default');
+      invalidatePrim();
+      updateVisuals();
+      log("succ", "Campus network completely reset: all 8 connections restored to Working status.");
+    }
+
+    // BFS Diagnosis Algorithm
+    function runBFS(animate = true) {
+      AnimController.stop();
+      clearHighlights();
+
+      const vis = new Array(BUILDINGS.length).fill(false);
+      const q = [0];
+      vis[0] = true;
+      const order = [];
+      const traversalSteps = [];
+
+      traversalSteps.push({ type: 'node', id: 0 });
+
+      while (q.length > 0) {
+        const u = q.shift();
+        order.push(u);
+
+        CONNECTIONS.forEach(e => {
+          if (edgeStatus[e.id] === 0) {
+            let v = -1;
+            if (e.u === u) v = e.v;
+            else if (e.v === u) v = e.u;
+
+            if (v !== -1 && !vis[v]) {
+              vis[v] = true;
+              q.push(v);
+              traversalSteps.push({ type: 'edge', id: e.id });
+              traversalSteps.push({ type: 'node', id: v });
+            }
+          }
+        });
+      }
+
+      const reachable = order.map(id => BUILDINGS[id].name);
+      const disconnected = [];
+      for (let i = 0; i < BUILDINGS.length; i++) {
+        if (!vis[i]) disconnected.push(BUILDINGS[i]);
+      }
+
+      if (animate) {
+        log("bfs", `Starting BFS Network Diagnosis from Main Block (0)...`);
+        AnimController.start('bfs', traversalSteps, () => {
+          finishBFS(reachable, disconnected, vis);
+        });
+      } else {
+        finishBFS(reachable, disconnected, vis);
+      }
+    }
+
+    function finishBFS(reachable, disconnected, vis) {
+      for (let i = 0; i < BUILDINGS.length; i++) {
+        nodeState[i] = vis[i] ? 'bfs-visited' : 'disconnected';
+      }
+      updateVisuals();
+
+      log("bfs", `BFS Traversal Order: ${reachable.join(" -> ")}`);
+      if (disconnected.length === 0) {
+        log("succ", "Diagnosis Result: All 6 campus buildings are reachable. Network is fully connected.");
+      } else {
+        const names = disconnected.map(b => `${b.name} (Building ${b.id})`).join(", ");
+        log("fail", `Diagnosis Result: Network partition detected! Disconnected: ${names}`);
+      }
+    }
+
+    // Mathematical Prim's MST Recovery Plan
+    function runPrim(animate = true) {
+      AnimController.stop();
+      clearHighlights();
+
+      const n = BUILDINGS.length;
+      const key = new Array(n).fill(Infinity);
+      const par = new Array(n).fill(-1);
+      const st = new Array(n).fill(false);
+
+      key[0] = 0;
+
+      for (let count = 0; count < n; count++) {
+        let u = -1;
+        let minKey = Infinity;
+        for (let i = 0; i < n; i++) {
+          if (!st[i] && key[i] < minKey) {
+            minKey = key[i];
+            u = i;
+          }
+        }
+
+        if (u === -1) {
+          // Spanning tree is impossible!
+          primResult = {
+            calculated: true,
+            possible: false,
+            treeEdges: [],
+            totalRecoveryCost: 0,
+            repairCount: 0
+          };
+          displayImpossiblePrim();
+          return;
+        }
+
+        st[u] = true;
+
+        CONNECTIONS.forEach(e => {
+          let v = -1;
+          if (e.u === u) v = e.v;
+          else if (e.v === u) v = e.u;
+
+          if (v !== -1 && !st[v]) {
+            let w = Infinity;
+            if (edgeStatus[e.id] === 0) {
+              w = 0; // Working links have 0 additional cost
+            } else if (edgeStatus[e.id] === 1) {
+              w = e.cost; // Failed repairable links have their original cost
+            }
+
+            if (w < Infinity && w < key[v]) {
+              key[v] = w;
+              par[v] = u;
+            }
+          }
+        });
+      }
+
+      // Collect Exactly V-1 = 5 Selected Spanning Tree Edges
+      const treeEdges = [];
+      let totalCost = 0;
+      let repairCount = 0;
+      const steps = [];
+      let cumulativeCost = 0;
+      let cumulativeRepairs = 0;
+
+      for (let v = 1; v < n; v++) {
+        const u = par[v];
+        const e = CONNECTIONS.find(edge => (edge.u === u && edge.v === v) || (edge.u === v && edge.v === u));
+        if (e) {
+          const isRepair = (edgeStatus[e.id] === 1);
+          const addCost = isRepair ? e.cost : 0;
+          cumulativeCost += addCost;
+          if (isRepair) cumulativeRepairs++;
+
+          const stepObj = {
+            type: 'prim-step',
+            stepNumber: v,
+            edge: e,
+            u: u,
+            v: v,
+            isRepair: isRepair,
+            additionalCost: addCost,
+            cumulativeCost: cumulativeCost,
+            cumulativeRepairs: cumulativeRepairs
+          };
+
+          treeEdges.push(stepObj);
+          steps.push(stepObj);
+
+          if (isRepair) {
+            totalCost += e.cost;
+            repairCount++;
+          }
+        }
+      }
+
+      primResult = {
+        calculated: true,
+        possible: true,
+        treeEdges: treeEdges,
+        totalRecoveryCost: totalCost,
+        repairCount: repairCount
+      };
+
+      // Set Panel to Calculating State
+      document.getElementById("primStatusPill").className = "status-pill status-pill-calculating";
+      document.getElementById("primStatusPill").textContent = "STATUS: CALCULATING PLAN...";
+      document.getElementById("primTableBody").innerHTML = "";
+
+      if (animate) {
+        log("prim", `Calculating Prim's Minimum Spanning Tree across 6 buildings...`);
+        AnimController.start('prim', steps, () => {
+          finishPrimSuccess();
+        });
+      } else {
+        treeEdges.forEach(step => {
+          const e = step.edge;
+          edgeHighlight[e.id] = step.isRepair ? 'prim-repair' : 'prim-working';
+          nodeState[step.u] = 'prim-tree';
+          nodeState[step.v] = 'prim-tree';
+          addPrimTableRow(step);
+        });
+        finishPrimSuccess();
+      }
+    }
+
+    function addPrimTableRow(step) {
+      const tbody = document.getElementById("primTableBody");
+      const e = step.edge;
+      const tr = document.createElement("tr");
+      tr.id = `prim-row-${e.id}`;
+
+      const badgeHtml = step.isRepair
+        ? `<span class="badge badge-tree-rep" id="prim-badge-${e.id}">NEEDS REPAIR</span>`
+        : `<span class="badge badge-tree-work" id="prim-badge-${e.id}">WORKING (IN TREE)</span>`;
+
+      const addCostText = step.isRepair ? `+${step.additionalCost}` : `+0`;
+
+      tr.innerHTML = `
+        <td><strong>#${e.id}</strong></td>
+        <td>${BUILDINGS[step.u].name} — ${BUILDINGS[step.v].name}</td>
+        <td>${e.cost}</td>
+        <td>${badgeHtml}</td>
+        <td style="font-weight:700; color:${step.isRepair ? 'var(--color-prim-repair)' : 'var(--color-working)'}">${addCostText}</td>
+        <td style="font-weight:800;">${step.cumulativeCost}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    function finishPrimSuccess() {
+      // Finalize Visual Highlights on Graph
+      primResult.treeEdges.forEach(item => {
+        edgeHighlight[item.edge.id] = item.isRepair ? 'prim-repair' : 'prim-working';
+        nodeState[item.u] = 'prim-tree';
+        nodeState[item.v] = 'prim-tree';
+      });
+      updateVisuals();
+
+      // Finalize Prim Dedicated Panel
+      const pill = document.getElementById("primStatusPill");
+      pill.className = "status-pill status-pill-complete";
+      pill.textContent = "STATUS: COMPLETE SPANNING TREE";
+
+      document.getElementById("primBannerCost").textContent = primResult.totalRecoveryCost + " UNITS";
+      document.getElementById("primBannerRepairs").textContent = primResult.repairCount + " LINK(S)";
+      document.getElementById("primBannerEdges").textContent = primResult.treeEdges.length + " / 5 EDGES";
+
+      const noteElem = document.getElementById("primRecoveryNote");
+      const actionBar = document.getElementById("recoveryActionBar");
+      const actionBadge = document.getElementById("recoveryActionBadge");
+      const actionText = document.getElementById("recoveryActionText");
+      const btnApply = document.getElementById("btnApplyRepairs");
+      const sideBtn = document.getElementById("btnSideApplyRepairs");
+
+      if (primResult.repairCount === 0) {
+        noteElem.innerHTML = `
+          <strong>Full Spanning Tree Formed Without Repairs:</strong> All buildings are already connected through existing working connections. Minimum additional recovery cost is <strong>0 units</strong>.
+        `;
+        log("succ", `Prim MST Complete: Spanning tree formed with 0 repairs. Total Recovery Cost: 0.`);
+
+        if (actionBar) {
+          actionBar.style.display = "flex";
+          actionBar.className = "recovery-action-bar repaired-state";
+          actionBadge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>CAMPUS HEALTHY</span>';
+          actionText.innerHTML = "All campus buildings are already connected through operational links. Zero repairs required.";
+          btnApply.disabled = true;
+          btnApply.className = "btn btn-apply-repairs btn-repaired-done";
+          btnApply.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>All Links Healthy</span>';
+        }
+        if (sideBtn) sideBtn.style.display = "none";
+      } else {
+        noteElem.innerHTML = `
+          <strong>Minimum-Cost Recovery Plan Complete:</strong> Reconnecting all buildings requires repairing <strong>${primResult.repairCount} connection(s)</strong> at a minimal total cost of <strong>${primResult.totalRecoveryCost} units</strong>. All 5 spanning tree edges are highlighted above. Click <strong>"Restore & Repair Links"</strong> below to execute recovery and correct the network.
+        `;
+        log("succ", `Prim MST Complete: Spanning tree established! Required Repairs: ${primResult.repairCount} | Minimum Additional Cost: ${primResult.totalRecoveryCost}.`);
+
+        if (actionBar) {
+          actionBar.style.display = "flex";
+          actionBar.className = "recovery-action-bar";
+          actionBadge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> <span>RECOMMENDED ACTION</span>';
+          actionText.innerHTML = `Prim's MST identified <strong>${primResult.repairCount} connection(s)</strong> to repair at minimum total cost of <strong>${primResult.totalRecoveryCost} units</strong> to reconnect the entire campus.`;
+          btnApply.disabled = false;
+          btnApply.className = "btn btn-apply-repairs";
+          btnApply.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> <span>Restore & Repair Links (${primResult.totalRecoveryCost} Cost)</span>`;
+        }
+        if (sideBtn) {
+          sideBtn.style.display = "inline-flex";
+          sideBtn.disabled = false;
+          sideBtn.className = "btn btn-apply-repairs btn-full";
+          sideBtn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg> <span>Restore & Repair Links (${primResult.totalRecoveryCost})</span>`;
+        }
+      }
+      updateMetrics();
+    }
+
+    // Interactive Prim Recovery Action: Restores recommended links and corrects the network
+    function applyPrimRepairs() {
+      if (!primResult.calculated || !primResult.possible || primResult.repairCount === 0) {
+        log("sys", "No repairable links in the current recovery plan.");
+        return;
+      }
+
+      AnimController.stop();
+
+      const repaired = [];
+      primResult.treeEdges.forEach(item => {
+        if (item.isRepair) {
+          edgeStatus[item.edge.id] = 0; // Restore to Working
+          repaired.push(item);
+        }
+      });
+
+      primRepaired = true;
+
+      // Update Prim Status Pill
+      const pill = document.getElementById("primStatusPill");
+      pill.className = "status-pill status-pill-repaired";
+      pill.textContent = "STATUS: REPAIRED & VERIFIED";
+
+      // Update Action Bar UI
+      const actionBar = document.getElementById("recoveryActionBar");
+      const actionBadge = document.getElementById("recoveryActionBadge");
+      const actionText = document.getElementById("recoveryActionText");
+      const btnApply = document.getElementById("btnApplyRepairs");
+      const sideBtn = document.getElementById("btnSideApplyRepairs");
+
+      if (actionBar) {
+        actionBar.className = "recovery-action-bar repaired-state";
+        if (actionBar.classList) actionBar.classList.add("repaired-state");
+        actionBadge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>REPAIRS APPLIED & VERIFIED</span>';
+        actionText.innerHTML = `<strong>Network Successfully Corrected!</strong> Restored ${repaired.length} connection(s) at total cost of <strong>${primResult.totalRecoveryCost} units</strong>. All 6 buildings reconnected.`;
+        btnApply.disabled = true;
+        btnApply.className = "btn btn-apply-repairs btn-repaired-done";
+        btnApply.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>Repairs Applied (Network Restored)</span>';
+      }
+      if (sideBtn) {
+        sideBtn.disabled = true;
+        sideBtn.innerHTML = '✓ Network Repaired';
+      }
+
+      // Update table badges for repaired rows
+      repaired.forEach(item => {
+        const badge = document.getElementById(`prim-badge-${item.edge.id}`);
+        if (badge) {
+          badge.className = "badge badge-tree-work";
+          badge.style.border = "1px solid #10b981";
+          badge.style.background = "rgba(16, 185, 129, 0.25)";
+          badge.style.color = "#047857";
+          badge.innerHTML = "✓ RESTORED";
+        }
+      });
+
+      // Update Note
+      document.getElementById("primRecoveryNote").innerHTML = `
+        <strong>Network Restored & Corrected:</strong> All recommended repairs have been executed. Every campus building is now verified reachable from Main Block. Total repair cost incurred: <strong>${primResult.totalRecoveryCost} units</strong>.
+      `;
+
+      // Log restorations
+      repaired.forEach(item => {
+        const e = item.edge;
+        log("succ", `Connection [#${e.id}] ${BUILDINGS[e.u].name} — ${BUILDINGS[e.v].name} restored to Working (Repair cost: ${e.cost}).`);
+      });
+      log("succ", `Prim Recovery Applied: Restored ${repaired.length} link(s) for ${primResult.totalRecoveryCost} cost units. Network fully corrected!`);
+
+      // Update visual lines, badges, and metrics
+      clearHighlights();
+      updateVisuals();
+
+      // Automatically run animated BFS to diagnose and visibly verify the corrected network!
+      runBFS(true);
+    }
+
+    function displayImpossiblePrim() {
+      primRepaired = false;
+      clearHighlights();
+      updateVisuals();
+
+      const actionBar = document.getElementById("recoveryActionBar");
+      if (actionBar) actionBar.style.display = "none";
+      const sideBtn = document.getElementById("btnSideApplyRepairs");
+      if (sideBtn) sideBtn.style.display = "none";
+
+      document.getElementById("primStatusPill").className = "status-pill status-pill-impossible";
+      document.getElementById("primStatusPill").textContent = "STATUS: RECOVERY IMPOSSIBLE";
+
+      document.getElementById("primBannerCost").textContent = "IMPOSSIBLE";
+      document.getElementById("primBannerRepairs").textContent = "N/A";
+      document.getElementById("primBannerEdges").textContent = "INCOMPLETE";
+
+      const tbody = document.getElementById("primTableBody");
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; padding: 22px; color: var(--color-failed); font-weight:700; font-size: 0.84rem;">
+            Recovery Plan Failed: Network cannot be fully reconnected. One or more buildings have all incident connections marked as Unavailable.
+          </td>
+        </tr>
+      `;
+
+      document.getElementById("primRecoveryNote").innerHTML = `
+        <strong style="color:var(--color-failed);">Spanning Tree Impossible:</strong> The remaining available connections (working + repairable) cannot span all 6 buildings into a single connected graph. Partial trees are intentionally not presented as successful recovery plans.
+      `;
+
+      log("fail", `Prim MST Failed: Complete recovery is mathematically impossible with current unavailable connections.`);
+      updateMetrics();
+    }
+
+    // Demo Scenario Progression
+    function startDemo() {
+      demoActive = true;
+      demoStep = 0;
+      document.getElementById("demoBanner").style.display = "block";
+      applyDemoStep(0);
+    }
+
+    function applyDemoStep(idx) {
+      demoStep = idx;
+      const snap = DEMO_SNAPSHOTS[idx];
+
+      // 1. Set exact deterministic edge statuses
+      Object.keys(snap.edges).forEach(id => {
+        edgeStatus[id] = snap.edges[id];
+      });
+
+      // 2. Stop running animations
+      AnimController.stop();
+
+      // 3. Update Banner UI
+      document.getElementById("demoStepText").innerHTML = `<strong>${snap.text}</strong>`;
+      document.getElementById("btnDemoPrev").disabled = (idx === 0);
+      document.getElementById("btnDemoNext").textContent = (idx === DEMO_SNAPSHOTS.length - 1) ? "Finish Demo" : "Next Step";
+
+      // 4. Run step specific action
+      snap.runAction();
+
+      // 5. Sync Visuals
+      updateVisuals();
+      log("demo", snap.text);
+    }
+
+    function endDemo() {
+      demoActive = false;
+      document.getElementById("demoBanner").style.display = "none";
+      log("demo", "Exited Viva Demo Tour.");
+    }
+
+    // Theme Switcher
+    function toggleTheme() {
+      const current = document.body.getAttribute("data-theme");
+      const next = current === "light" ? "dark" : "light";
+      document.body.setAttribute("data-theme", next);
+
+      const themeText = document.getElementById("themeText");
+      const themeIcon = document.getElementById("themeIcon");
+
+      if (next === "dark") {
+        themeText.textContent = "Blueprint Theme";
+        themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+      } else {
+        themeText.textContent = "Dark Theme";
+        themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+      }
+      log("sys", `Switched theme to ${next === "light" ? "Frosted Blueprint Light" : "Dark"}.`);
+    }
+
+    // Logger
+    function log(type, msg) {
+      const consoleBody = document.getElementById("consoleBody");
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+      const row = document.createElement("div");
+      row.className = "log-line";
+
+      let tagClass = "tag-sys";
+      let tagLabel = "SYS";
+      if (type === "bfs") { tagClass = "tag-bfs"; tagLabel = "BFS"; }
+      else if (type === "prim") { tagClass = "tag-prim"; tagLabel = "PRIM"; }
+      else if (type === "fail") { tagClass = "tag-fail"; tagLabel = "FAIL"; }
+      else if (type === "succ") { tagClass = "tag-succ"; tagLabel = "OK"; }
+      else if (type === "demo") { tagClass = "tag-demo"; tagLabel = "DEMO"; }
+
+      row.innerHTML = `
+        <span class="log-time">${time}</span>
+        <span class="log-tag ${tagClass}">${tagLabel}</span>
+        <span class="log-msg">${msg}</span>
+      `;
+
+      consoleBody.appendChild(row);
+      consoleBody.scrollTop = consoleBody.scrollHeight;
+    }
+
+    // Event Bindings
+    function setupEvents() {
+      // Theme switcher
+      document.getElementById("btnToggleTheme").onclick = toggleTheme;
+
+      // Radio mode buttons
+      const optRep = document.getElementById("optRepairable");
+      const optUna = document.getElementById("optUnavailable");
+      optRep.onclick = () => {
+        optRep.classList.add("selected");
+        optUna.classList.remove("selected");
+        optRep.querySelector("input").checked = true;
+      };
+      optUna.onclick = () => {
+        optUna.classList.add("selected");
+        optRep.classList.remove("selected");
+        optUna.querySelector("input").checked = true;
+      };
+
+      // Select Dropdown change
+      document.getElementById("selectEdge").onchange = (e) => {
+        selectEdgeInUI(parseInt(e.target.value, 10));
+      };
+
+      // Fail Edge
+      document.getElementById("btnFailEdge").onclick = () => {
+        const id = parseInt(document.getElementById("selectEdge").value, 10);
+        const mode = parseInt(document.querySelector('input[name="failMode"]:checked').value, 10);
+        setEdgeStatus(id, mode);
+      };
+
+      // Restore Edge
+      document.getElementById("btnRestoreEdge").onclick = () => {
+        const id = parseInt(document.getElementById("selectEdge").value, 10);
+        setEdgeStatus(id, 0);
+      };
+
+      // Reset
+      document.getElementById("btnResetAll").onclick = resetNetwork;
+
+      // Algorithms & Prim Repair Action
+      document.getElementById("btnRunBFS").onclick = () => runBFS(true);
+      document.getElementById("btnRunPrim").onclick = () => runPrim(true);
+      document.getElementById("btnApplyRepairs").onclick = applyPrimRepairs;
+      const sideBtn = document.getElementById("btnSideApplyRepairs");
+      if (sideBtn) sideBtn.onclick = applyPrimRepairs;
+
+      // Animation Controls
+      document.getElementById("btnPlayPause").onclick = () => {
+        if (AnimController.isRunning && !AnimController.isPaused) {
+          AnimController.pause();
+        } else if (AnimController.isRunning && AnimController.isPaused) {
+          AnimController.resume();
+        } else {
+          // Idle -> start animation
+          if (!primResult.calculated) {
+            runPrim(true);
+          } else {
+            runBFS(true);
+          }
+        }
+      };
+
+      document.getElementById("btnStepNext").onclick = () => {
+        AnimController.stepNext();
+      };
+
+      document.getElementById("btnStopAnim").onclick = () => {
+        AnimController.stop();
+        log("sys", "Animation stopped and reset to idle.");
+      };
+
+      document.getElementById("selectSpeed").onchange = (e) => {
+        AnimController.delay = parseInt(e.target.value, 10);
+        log("sys", `Animation speed set to ${e.target.options[e.target.selectedIndex].text}.`);
+      };
+
+      // Demo Scenario Navigation
+      document.getElementById("btnDemoScenario").onclick = startDemo;
+      document.getElementById("btnDemoPrev").onclick = () => {
+        if (demoStep > 0) applyDemoStep(demoStep - 1);
+      };
+      document.getElementById("btnDemoNext").onclick = () => {
+        if (demoStep < DEMO_SNAPSHOTS.length - 1) {
+          applyDemoStep(demoStep + 1);
+        } else {
+          endDemo();
+        }
+      };
+      document.getElementById("btnDemoExit").onclick = endDemo;
+
+      // Clear Log
+      document.getElementById("btnClearLog").onclick = () => {
+        document.getElementById("consoleBody").innerHTML = "";
+      };
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
