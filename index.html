@@ -577,6 +577,18 @@
       fill: #3b1219;
     }
 
+    .node-isolated {
+      stroke: #dc2626;
+      stroke-dasharray: 6 3;
+      stroke-width: 4;
+      fill: #fee2e2;
+      filter: drop-shadow(0 0 18px rgba(220, 38, 38, 0.7));
+    }
+    [data-theme="dark"] .node-isolated {
+      fill: #450a0a;
+      stroke: #f87171;
+    }
+
     .node-prim-tree {
       stroke: #2563eb;
       fill: #eff6ff;
@@ -630,6 +642,9 @@
     .legend-line.bfs { background: var(--color-bfs); }
     .legend-line.prim-work { background: var(--color-working); height: 6px; box-shadow: 0 0 6px var(--color-working-glow); }
     .legend-line.prim-rep { background: var(--color-prim-repair); height: 6px; box-shadow: 0 0 8px var(--color-prim-glow); }
+    .legend-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+    .legend-dot.isolated { border: 2px dashed #dc2626; background: #fee2e2; }
+    [data-theme="dark"] .legend-dot.isolated { border-color: #f87171; background: #450a0a; }
 
     /* DEDICATED PRIM RECOVERY PLAN PANEL */
     .recovery-panel-card {
@@ -1479,7 +1494,7 @@
 
       <button class="btn btn-demo" id="btnDemoScenario">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-        Demo Scenario (Section 11)
+        Guided Viva Workflow
       </button>
       <button class="btn btn-secondary" id="btnResetAll">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
@@ -1536,7 +1551,7 @@
     <div id="demoBanner">
       <div class="demo-content">
         <div>
-          <span class="demo-badge">Section 11 Demo</span>
+          <span class="demo-badge" id="demoPhaseBadge">Guided Workflow</span>
           <span class="demo-step-text" id="demoStepText">Step 1: Network reset to pristine fully working state.</span>
         </div>
         <div class="demo-actions">
@@ -1593,6 +1608,9 @@
             </div>
             <div class="legend-item">
               <span class="legend-line prim-rep"></span> Prim Repair Selected
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot isolated"></span> Isolated Node (0 links)
             </div>
           </div>
         </section>
@@ -2027,48 +2045,56 @@
     const DEMO_SNAPSHOTS = [
       {
         step: 1,
-        text: "Step 1: Network reset to pristine state. All 8 connections working.",
+        phase: "Phase 1: Baseline Network",
+        text: "Step 1 (Baseline): Network reset to pristine state. All 8 connections operational & working.",
         edges: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 },
         runAction: () => { clearHighlights(); invalidatePrim(); }
       },
       {
         step: 2,
+        phase: "Phase 2: Simulate Failure",
         text: "Step 2: Mark Connection 4 (Library — Administration) as Failed (repairable).",
         edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0, 7: 0, 8: 0 },
         runAction: () => { clearHighlights(); invalidatePrim(); }
       },
       {
         step: 3,
+        phase: "Phase 2: Simulate Failure",
         text: "Step 3: Mark Connection 7 (Administration — Medical Centre) as Failed (repairable).",
         edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0, 7: 1, 8: 0 },
         runAction: () => { clearHighlights(); invalidatePrim(); }
       },
       {
         step: 4,
+        phase: "Phase 3: Diagnose (BFS)",
         text: "Step 4: Run BFS Diagnosis. All 6 buildings remain reachable through alternate working paths.",
         edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0, 7: 1, 8: 0 },
         runAction: () => { runBFS(false); invalidatePrim(); }
       },
       {
         step: 5,
+        phase: "Phase 2: Sever Critical Link",
         text: "Step 5: Mark Connection 6 (Hostel — Medical Centre) as Failed (repairable).",
         edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 1, 7: 1, 8: 0 },
         runAction: () => { clearHighlights(); invalidatePrim(); }
       },
       {
         step: 6,
-        text: "Step 6: Run BFS Diagnosis. Medical Centre is now isolated from Main Block!",
+        phase: "Phase 3: Diagnose Isolated Node",
+        text: "Step 6: Run BFS Diagnosis. Medical Centre is now diagnosed as Completely Isolated (0 active links)!",
         edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 1, 7: 1, 8: 0 },
         runAction: () => { runBFS(false); invalidatePrim(); }
       },
       {
         step: 7,
+        phase: "Phase 4: Recovery Plan (Prim)",
         text: "Step 7: Run Prim MST Recovery Plan. Picks 4 working links and repairs Connection 6 (cost 3 vs 6). Minimum Cost: 3.",
         edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 1, 7: 1, 8: 0 },
         runAction: () => { runPrim(false); }
       },
       {
         step: 8,
+        phase: "Phase 5: Restore Connection",
         text: "Step 8: Restore Connection 6 (Hostel — Medical Centre) and run BFS. All buildings reachable again!",
         edges: { 1: 0, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0, 7: 1, 8: 0 },
         runAction: () => { runBFS(false); invalidatePrim(); }
@@ -2225,6 +2251,7 @@
     function getNodeClass(id) {
       const st = nodeState[id];
       if (st === 'bfs-visited') return 'node-circle node-bfs-visited';
+      if (st === 'isolated') return 'node-circle node-isolated';
       if (st === 'disconnected') return 'node-circle node-disconnected';
       if (st === 'prim-tree') return 'node-circle node-prim-tree';
       return 'node-circle';
@@ -2327,10 +2354,21 @@
       }
 
       let disconnectedCount = 0;
+      let isolatedCount = 0;
+      let unreachableClusterCount = 0;
+
       for (let i = 0; i < BUILDINGS.length; i++) {
-        if (!vis[i]) disconnectedCount++;
+        if (!vis[i]) {
+          disconnectedCount++;
+          let workingDeg = 0;
+          CONNECTIONS.forEach(e => {
+            if (edgeStatus[e.id] === 0 && (e.u === i || e.v === i)) workingDeg++;
+          });
+          if (workingDeg === 0) isolatedCount++;
+          else unreachableClusterCount++;
+        }
       }
-      return { vis, disconnectedCount };
+      return { vis, disconnectedCount, isolatedCount, unreachableClusterCount };
     }
 
     // Metrics Dashboard State Management
@@ -2346,8 +2384,14 @@
       document.getElementById("valFailedLinks").textContent = failed;
 
       // 3. Disconnected Buildings (reflects current working reachability from Main Block)
-      const { disconnectedCount } = calculateWorkingReachability();
-      document.getElementById("valDisconnected").textContent = disconnectedCount;
+      const { disconnectedCount, isolatedCount } = calculateWorkingReachability();
+      const discElem = document.getElementById("valDisconnected");
+      discElem.textContent = disconnectedCount;
+      if (isolatedCount > 0) {
+        discElem.title = `${disconnectedCount} unreachable (${isolatedCount} completely isolated with 0 active links)`;
+      } else {
+        discElem.title = `${disconnectedCount} unreachable from Main Block`;
+      }
 
       // 4. Recovery Cost Metric
       const valRecElem = document.getElementById("valRecoveryCost");
@@ -2366,7 +2410,7 @@
       AnimController.stop();
       edgeStatus[id] = newStatus;
       clearHighlights();
-      invalidatePrim();
+      invalidatePrim(true);
       updateVisuals();
 
       const e = CONNECTIONS[id - 1];
@@ -2383,18 +2427,28 @@
       updateVisuals();
     }
 
-    function invalidatePrim() {
+    function invalidatePrim(networkModified = false) {
       primRepaired = false;
+      const wasCalculated = primResult.calculated;
       primResult = {
         calculated: false,
         possible: false,
+        components: [],
         treeEdges: [],
         totalRecoveryCost: 0,
         repairCount: 0
       };
 
-      document.getElementById("primStatusPill").className = "status-pill status-pill-neutral";
-      document.getElementById("primStatusPill").textContent = "STATUS: NOT CALCULATED";
+      const pill = document.getElementById("primStatusPill");
+      if (pill) {
+        if (networkModified && wasCalculated) {
+          pill.className = "status-pill status-pill-neutral";
+          pill.textContent = "STATUS: OUTDATED (NETWORK MODIFIED)";
+        } else {
+          pill.className = "status-pill status-pill-neutral";
+          pill.textContent = "STATUS: NOT CALCULATED";
+        }
+      }
       document.getElementById("primBannerCost").textContent = "—";
       document.getElementById("primBannerRepairs").textContent = "—";
       document.getElementById("primBannerEdges").textContent = "—";
@@ -2413,7 +2467,9 @@
       tbody.innerHTML = `
         <tr>
           <td colspan="6" style="text-align:center; padding: 22px; color: var(--text-dim); font-size: 0.8rem;">
-            Recovery plan not yet calculated. Click <strong>"Calculate Recovery Plan (Prim)"</strong> or run the <strong>Demo Scenario</strong> to evaluate minimum-cost spanning tree.
+            ${(networkModified && wasCalculated)
+              ? 'Previous recovery plan is outdated due to network changes. Click <strong>"Calculate Recovery Plan (Prim)"</strong> to recalculate.'
+              : 'Recovery plan not yet calculated. Click <strong>"Calculate Recovery Plan (Prim)"</strong> or run the <strong>Guided Viva Workflow</strong> to evaluate minimum-cost spanning tree.'}
           </td>
         </tr>
       `;
@@ -2486,17 +2542,86 @@
 
     function finishBFS(reachable, disconnected, vis) {
       for (let i = 0; i < BUILDINGS.length; i++) {
-        nodeState[i] = vis[i] ? 'bfs-visited' : 'disconnected';
+        if (vis[i]) {
+          nodeState[i] = 'bfs-visited';
+        } else {
+          let workingDeg = 0;
+          CONNECTIONS.forEach(e => {
+            if (edgeStatus[e.id] === 0 && (e.u === i || e.v === i)) workingDeg++;
+          });
+          nodeState[i] = (workingDeg === 0) ? 'isolated' : 'disconnected';
+        }
       }
       updateVisuals();
 
-      log("bfs", `BFS Traversal Order: ${reachable.join(" -> ")}`);
+      log("bfs", `Starting Building: Main Block (0)`);
+      log("bfs", `Traversal Order: ${reachable.join(" -> ")}`);
+      log("bfs", `Reachable Buildings (${reachable.length}/6): ${reachable.join(", ")}`);
+
       if (disconnected.length === 0) {
-        log("succ", "Diagnosis Result: All 6 campus buildings are reachable. Network is fully connected.");
+        log("succ", "Diagnosis Result: All 6 campus buildings are reachable. No building is currently disconnected.");
       } else {
-        const names = disconnected.map(b => `${b.name} (Building ${b.id})`).join(", ");
-        log("fail", `Diagnosis Result: Network partition detected! Disconnected: ${names}`);
+        const isolatedBuildings = [];
+        const unreachableCluster = [];
+
+        disconnected.forEach(b => {
+          let workingDeg = 0;
+          CONNECTIONS.forEach(e => {
+            if (edgeStatus[e.id] === 0 && (e.u === b.id || e.v === b.id)) workingDeg++;
+          });
+          if (workingDeg === 0) {
+            isolatedBuildings.push(b);
+          } else {
+            unreachableCluster.push(b);
+          }
+        });
+
+        if (isolatedBuildings.length > 0) {
+          const names = isolatedBuildings.map(b => `${b.name} (Building ${b.id})`).join(", ");
+          log("fail", `Diagnosis Result — Completely Isolated Buildings (0 active links): ${names}`);
+        }
+
+        if (unreachableCluster.length > 0) {
+          const names = unreachableCluster.map(b => `${b.name} (Building ${b.id})`).join(", ");
+          log("fail", `Diagnosis Result — Partitioned Sub-cluster (active links exist, but unreachable from Main Block): ${names}`);
+        }
+
+        log("fail", `Diagnosis Result: Network partition detected! Total Unreachable: ${disconnected.length} building(s).`);
       }
+    }
+
+    // Find Connected Components in Eligible Subgraph (status !== 2)
+    function findEligibleComponents() {
+      const compVis = new Array(BUILDINGS.length).fill(false);
+      const components = [];
+
+      for (let i = 0; i < BUILDINGS.length; i++) {
+        if (!compVis[i]) {
+          const compNodes = [];
+          const q = [i];
+          compVis[i] = true;
+
+          while (q.length > 0) {
+            const curr = q.shift();
+            compNodes.push(curr);
+
+            CONNECTIONS.forEach(e => {
+              if (edgeStatus[e.id] !== 2) {
+                let nxt = -1;
+                if (e.u === curr) nxt = e.v;
+                else if (e.v === curr) nxt = e.u;
+
+                if (nxt !== -1 && !compVis[nxt]) {
+                  compVis[nxt] = true;
+                  q.push(nxt);
+                }
+              }
+            });
+          }
+          components.push(compNodes);
+        }
+      }
+      return components;
     }
 
     // Mathematical Prim's MST Recovery Plan
@@ -2522,15 +2647,16 @@
         }
 
         if (u === -1) {
-          // Spanning tree is impossible!
+          const components = findEligibleComponents();
           primResult = {
             calculated: true,
             possible: false,
+            components: components,
             treeEdges: [],
             totalRecoveryCost: 0,
             repairCount: 0
           };
-          displayImpossiblePrim();
+          displayImpossiblePrim(components);
           return;
         }
 
@@ -2557,7 +2683,8 @@
         });
       }
 
-      // Collect Exactly V-1 = 5 Selected Spanning Tree Edges
+      // Validate that parent references and selected edges are valid before rendering
+      let isValidTree = true;
       const treeEdges = [];
       let totalCost = 0;
       let repairCount = 0;
@@ -2567,38 +2694,60 @@
 
       for (let v = 1; v < n; v++) {
         const u = par[v];
-        const e = CONNECTIONS.find(edge => (edge.u === u && edge.v === v) || (edge.u === v && edge.v === u));
-        if (e) {
-          const isRepair = (edgeStatus[e.id] === 1);
-          const addCost = isRepair ? e.cost : 0;
-          cumulativeCost += addCost;
-          if (isRepair) cumulativeRepairs++;
-
-          const stepObj = {
-            type: 'prim-step',
-            stepNumber: v,
-            edge: e,
-            u: u,
-            v: v,
-            isRepair: isRepair,
-            additionalCost: addCost,
-            cumulativeCost: cumulativeCost,
-            cumulativeRepairs: cumulativeRepairs
-          };
-
-          treeEdges.push(stepObj);
-          steps.push(stepObj);
-
-          if (isRepair) {
-            totalCost += e.cost;
-            repairCount++;
-          }
+        if (u < 0 || u >= n || u === v) {
+          isValidTree = false;
+          break;
         }
+        const e = CONNECTIONS.find(edge => (edge.u === u && edge.v === v) || (edge.u === v && edge.v === u));
+        if (!e || edgeStatus[e.id] === 2) {
+          isValidTree = false;
+          break;
+        }
+
+        const isRepair = (edgeStatus[e.id] === 1);
+        const addCost = isRepair ? e.cost : 0;
+        cumulativeCost += addCost;
+        if (isRepair) cumulativeRepairs++;
+
+        const stepObj = {
+          type: 'prim-step',
+          stepNumber: v,
+          edge: e,
+          u: u,
+          v: v,
+          isRepair: isRepair,
+          additionalCost: addCost,
+          cumulativeCost: cumulativeCost,
+          cumulativeRepairs: cumulativeRepairs
+        };
+
+        treeEdges.push(stepObj);
+        steps.push(stepObj);
+
+        if (isRepair) {
+          totalCost += e.cost;
+          repairCount++;
+        }
+      }
+
+      if (!isValidTree || treeEdges.length !== n - 1) {
+        const components = findEligibleComponents();
+        primResult = {
+          calculated: true,
+          possible: false,
+          components: components,
+          treeEdges: [],
+          totalRecoveryCost: 0,
+          repairCount: 0
+        };
+        displayImpossiblePrim(components);
+        return;
       }
 
       primResult = {
         calculated: true,
         possible: true,
+        components: [BUILDINGS.map(b => b.id)],
         treeEdges: treeEdges,
         totalRecoveryCost: totalCost,
         repairCount: repairCount
@@ -2792,7 +2941,7 @@
       runBFS(true);
     }
 
-    function displayImpossiblePrim() {
+    function displayImpossiblePrim(components = findEligibleComponents()) {
       primRepaired = false;
       clearHighlights();
       updateVisuals();
@@ -2809,20 +2958,39 @@
       document.getElementById("primBannerRepairs").textContent = "N/A";
       document.getElementById("primBannerEdges").textContent = "INCOMPLETE";
 
+      const compHtml = components.map((comp, idx) => {
+        const names = comp.map(cid => `<strong>${BUILDINGS[cid].name}</strong> [${cid}]`).join(", ");
+        return `<div style="margin-top: 4px;">&bull; <strong>Component ${idx + 1}</strong> (${comp.length} building${comp.length > 1 ? 's' : ''}): ${names}</div>`;
+      }).join("");
+
       const tbody = document.getElementById("primTableBody");
       tbody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align:center; padding: 22px; color: var(--color-failed); font-weight:700; font-size: 0.84rem;">
-            Recovery Plan Failed: Network cannot be fully reconnected. One or more buildings have all incident connections marked as Unavailable.
+          <td colspan="6" style="text-align:left; padding: 18px 24px; color: var(--color-failed); font-size: 0.82rem; line-height: 1.6;">
+            <div style="font-weight:700; font-size: 0.9rem; margin-bottom: 6px;">Recovery Plan Failed: Complete Recovery Is Impossible</div>
+            <div>The remaining available connections (Working + Repairable) cannot form a single spanning tree without traversing Unavailable connections.</div>
+            <div style="margin-top: 10px; padding: 10px 14px; background: rgba(239, 68, 68, 0.08); border-left: 3px solid var(--color-failed); border-radius: 4px;">
+              <div style="font-weight:700; color: var(--text-main);">Identified Disconnected Components (${components.length}):</div>
+              ${compHtml}
+            </div>
+            <div style="margin-top: 8px; color: var(--text-muted); font-size: 0.78rem;">
+              No additional links or repair costs are invented. At least one bridging connection must be restored to Working state to allow full recovery.
+            </div>
           </td>
         </tr>
       `;
 
       document.getElementById("primRecoveryNote").innerHTML = `
-        <strong style="color:var(--color-failed);">Spanning Tree Impossible:</strong> The remaining available connections (working + repairable) cannot span all 6 buildings into a single connected graph. Partial trees are intentionally not presented as successful recovery plans.
+        <strong style="color:var(--color-failed);">Complete Spanning Tree Cannot Form:</strong> The eligible network is partitioned into <strong>${components.length} disconnected components</strong>. Unavailable connections cannot be selected for recovery, and a partial tree is intentionally not presented as a successful recovery plan.
       `;
 
-      log("fail", `Prim MST Failed: Complete recovery is mathematically impossible with current unavailable connections.`);
+      log("fail", `Recovery Plan Failed: Complete recovery is impossible.`);
+      log("fail", `Remaining available connections cannot connect every building.`);
+      log("fail", `Eligible graph partitioned into ${components.length} disconnected components:`);
+      components.forEach((comp, idx) => {
+        const names = comp.map(cid => `${BUILDINGS[cid].name} [${cid}]`).join(", ");
+        log("fail", `  Component ${idx + 1}: ${names}`);
+      });
       updateMetrics();
     }
 
@@ -2847,6 +3015,8 @@
       AnimController.stop();
 
       // 3. Update Banner UI
+      const badge = document.getElementById("demoPhaseBadge");
+      if (badge && snap.phase) badge.textContent = snap.phase;
       document.getElementById("demoStepText").innerHTML = `<strong>${snap.text}</strong>`;
       document.getElementById("btnDemoPrev").disabled = (idx === 0);
       document.getElementById("btnDemoNext").textContent = (idx === DEMO_SNAPSHOTS.length - 1) ? "Finish Demo" : "Next Step";
@@ -2933,16 +3103,51 @@
         selectEdgeInUI(parseInt(e.target.value, 10));
       };
 
-      // Fail Edge
+      // Fail Edge with C++ transition guards
       document.getElementById("btnFailEdge").onclick = () => {
         const id = parseInt(document.getElementById("selectEdge").value, 10);
+        if (isNaN(id) || id < 1 || id > CONNECTIONS.length) {
+          log("fail", "Invalid connection number.");
+          return;
+        }
+
         const mode = parseInt(document.querySelector('input[name="failMode"]:checked').value, 10);
+        const curStatus = edgeStatus[id];
+        const e = CONNECTIONS[id - 1];
+        const uName = BUILDINGS[e.u].name;
+        const vName = BUILDINGS[e.v].name;
+
+        if (curStatus === 2) {
+          log("fail", `Connection [#${id}] ${uName} — ${vName} is already Unavailable. Restore it first before changing failure mode.`);
+          return;
+        }
+
+        if (curStatus === 1 && mode === 1) {
+          log("sys", `Connection [#${id}] ${uName} — ${vName} is already marked as Failed (repairable). No changes made.`);
+          return;
+        }
+
         setEdgeStatus(id, mode);
       };
 
-      // Restore Edge
+      // Restore Edge with C++ transition guards
       document.getElementById("btnRestoreEdge").onclick = () => {
         const id = parseInt(document.getElementById("selectEdge").value, 10);
+        if (isNaN(id) || id < 1 || id > CONNECTIONS.length) {
+          log("fail", "Invalid connection number.");
+          return;
+        }
+
+        const curStatus = edgeStatus[id];
+        const e = CONNECTIONS[id - 1];
+        const uName = BUILDINGS[e.u].name;
+        const vName = BUILDINGS[e.v].name;
+
+        if (curStatus === 0) {
+          log("sys", `Connection [#${id}] ${uName} — ${vName} is already Working. No change needed.`);
+          return;
+        }
+
         setEdgeStatus(id, 0);
       };
 
