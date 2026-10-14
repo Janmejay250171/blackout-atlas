@@ -403,6 +403,7 @@
       position: relative;
       width: 100%;
       height: 500px;
+      max-height: 70vh;
       background-color: var(--bg-blueprint);
       background-image:
         radial-gradient(circle at 68% 38%, rgba(56, 189, 248, 0.42) 0%, rgba(125, 211, 252, 0.25) 30%, transparent 65%),
@@ -422,6 +423,8 @@
       width: 100%;
       height: 100%;
       user-select: none;
+      touch-action: manipulation;
+      display: block;
     }
 
     /* Graph SVG Elements */
@@ -696,6 +699,8 @@
     .recovery-table-container {
       max-height: 220px;
       overflow-y: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
       border-bottom: 1px solid var(--border-color);
     }
 
@@ -1014,9 +1019,19 @@
     .table-container {
       max-height: 180px;
       overflow-y: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
       border: 1px solid var(--border-color);
       border-radius: 8px;
       background: var(--bg-blueprint);
+    }
+
+    #primTable {
+      min-width: 520px;
+    }
+
+    button, select, input, .radio-option {
+      touch-action: manipulation;
     }
 
     table {
@@ -1144,6 +1159,291 @@
     @keyframes pulseEdge {
       0%, 100% { stroke-opacity: 1; }
       50% { stroke-opacity: 0.5; }
+    }
+
+    /* Media Queries & Responsive Design System */
+    @media (min-width: 768px) and (max-width: 1250px) {
+      main {
+        padding: 16px 20px;
+      }
+
+      .dashboard-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .control-panel {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .control-panel .panel-card:nth-child(3) {
+        grid-column: span 2;
+      }
+
+      .graph-canvas-container {
+        height: auto;
+        aspect-ratio: 780 / 490;
+        min-height: 380px;
+        max-height: 520px;
+      }
+    }
+
+    @media (max-width: 767px) {
+      header {
+        padding: 12px 16px;
+        gap: 12px;
+      }
+
+      .brand {
+        gap: 10px;
+      }
+
+      .brand-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+      }
+
+      .brand-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .brand-title h1 {
+        font-size: 1.08rem;
+      }
+
+      .brand-title p {
+        font-size: 0.72rem;
+      }
+
+      .tag-companion {
+        font-size: 0.68rem;
+        padding: 2px 7px;
+      }
+
+      .header-actions {
+        width: 100%;
+        display: flex;
+        gap: 8px;
+      }
+
+      .header-actions .btn {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 10px;
+        font-size: 0.76rem;
+      }
+
+      main {
+        padding: 12px 14px;
+        gap: 14px;
+      }
+
+      /* Compact 2x2 Metrics */
+      .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      .metric-card {
+        padding: 10px 12px;
+        border-radius: 10px;
+      }
+
+      .metric-info h3 {
+        font-size: 0.65rem;
+      }
+
+      .metric-info .value {
+        font-size: 1.35rem;
+      }
+
+      .metric-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        font-size: 1rem;
+      }
+
+      /* Demo Banner */
+      .demo-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .demo-actions {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+      }
+
+      .demo-actions .btn {
+        flex: 1;
+        justify-content: center;
+        padding: 7px 8px;
+        font-size: 0.74rem;
+      }
+
+      /* Graph Card */
+      .card-header {
+        padding: 10px 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+
+      .card-header h2 {
+        font-size: 0.88rem;
+      }
+
+      .graph-canvas-container {
+        height: auto;
+        aspect-ratio: 780 / 490;
+        min-height: 250px;
+        max-height: 420px;
+      }
+
+      .graph-legend {
+        padding: 10px 14px;
+        gap: 8px 14px;
+      }
+
+      .legend-item {
+        font-size: 0.72rem;
+      }
+
+      /* Prim Recovery Summary Banner */
+      .recovery-summary-banner {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 10px 12px;
+      }
+
+      .summary-box:nth-child(3) {
+        grid-column: span 2;
+      }
+
+      .summary-box {
+        padding: 8px 10px;
+      }
+
+      .summary-label {
+        font-size: 0.64rem;
+      }
+
+      .summary-val {
+        font-size: 1.15rem;
+      }
+
+      /* Recovery Action Bar */
+      .recovery-action-bar {
+        padding: 12px 14px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .btn-apply-repairs {
+        width: 100%;
+        justify-content: center;
+        padding: 10px 14px;
+        font-size: 0.8rem;
+      }
+
+      .recovery-note {
+        padding: 10px 14px;
+        font-size: 0.74rem;
+      }
+
+      /* Control Cards */
+      .panel-card {
+        padding: 14px;
+      }
+
+      .btn-grid {
+        gap: 8px;
+      }
+
+      .btn {
+        padding: 8px 12px;
+      }
+
+      .anim-status-row {
+        font-size: 0.72rem;
+      }
+
+      .anim-buttons-row {
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .anim-buttons-row .btn {
+        flex: 1;
+        min-width: 65px;
+        padding: 7px 6px;
+        font-size: 0.74rem;
+        justify-content: center;
+      }
+
+      .console-header {
+        padding: 8px 14px;
+      }
+
+      .console-body {
+        height: 110px;
+        padding: 8px 12px;
+        font-size: 0.72rem;
+      }
+
+      .log-line {
+        font-size: 0.72rem;
+      }
+    }
+
+    /* Very Small Screens (< 480px) */
+    @media (max-width: 480px) {
+      .tag-companion {
+        display: none;
+      }
+
+      .brand-title h1 {
+        font-size: 0.98rem;
+      }
+
+      .brand-title p {
+        display: none;
+      }
+
+      .metrics-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .metric-card {
+        padding: 8px 10px;
+      }
+
+      .metric-info .value {
+        font-size: 1.18rem;
+      }
+
+      .metric-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
+      }
+
+      .graph-canvas-container {
+        min-height: 220px;
+      }
+
+      .recovery-action-text {
+        font-size: 0.78rem;
+      }
     }
   </style>
 </head>
