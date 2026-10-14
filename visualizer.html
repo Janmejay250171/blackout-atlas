@@ -185,6 +185,26 @@
       background: linear-gradient(135deg, #0369a1, #075985);
       transform: translateY(-1px);
     }
+    .btn-primary.active {
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.4), 0 4px 14px rgba(2, 132, 199, 0.3);
+    }
+
+    .btn-prim-calc {
+      background: linear-gradient(135deg, #059669, #0d9488);
+      color: #ffffff;
+      border-color: #059669;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+    }
+    .btn-prim-calc:hover {
+      background: linear-gradient(135deg, #047857, #0f766e);
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+    }
+    .btn-prim-calc.active {
+      background: linear-gradient(135deg, #047857, #065f46);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.45), 0 4px 14px rgba(5, 150, 105, 0.4);
+    }
 
     .btn-demo {
       background: linear-gradient(135deg, #d97706, #b45309);
@@ -577,14 +597,15 @@
     }
 
     .node-prim-tree {
-      stroke: #2563eb;
-      fill: #eff6ff;
+      stroke: #059669;
+      fill: #ecfdf5;
       stroke-width: 2.6;
-      filter: drop-shadow(0 0 10px rgba(37, 99, 235, 0.35));
+      filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.4));
     }
     [data-theme="dark"] .node-prim-tree {
-      fill: #1e3a8a;
-      stroke: #60a5fa;
+      fill: #064e3b;
+      stroke: #34d399;
+      filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.4));
     }
 
     .node-id {
@@ -1728,7 +1749,7 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
               Diagnose Network (BFS)
             </button>
-            <button class="btn btn-secondary btn-full" id="btnRunPrim">
+            <button class="btn btn-prim-calc btn-full" id="btnRunPrim">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
               Calculate Recovery Plan (Prim)
             </button>
@@ -2450,12 +2471,18 @@
     function clearHighlights() {
       CONNECTIONS.forEach(e => edgeHighlight[e.id] = 'none');
       BUILDINGS.forEach(b => nodeState[b.id] = 'default');
+      const btnBFS = document.getElementById("btnRunBFS");
+      const btnPrim = document.getElementById("btnRunPrim");
+      if (btnBFS && btnBFS.classList) btnBFS.classList.remove("active");
+      if (btnPrim && btnPrim.classList) btnPrim.classList.remove("active");
       updateVisuals();
     }
 
     function invalidatePrim(networkModified = false) {
       primRepaired = false;
       const wasCalculated = primResult.calculated;
+      const btnPrim = document.getElementById("btnRunPrim");
+      if (btnPrim && btnPrim.classList) btnPrim.classList.remove("active");
       primResult = {
         calculated: false,
         possible: false,
@@ -2512,6 +2539,10 @@
         edgeHighlight[e.id] = 'none';
       });
       BUILDINGS.forEach(b => nodeState[b.id] = 'default');
+      const btnBFS = document.getElementById("btnRunBFS");
+      const btnPrim = document.getElementById("btnRunPrim");
+      if (btnBFS && btnBFS.classList) btnBFS.classList.remove("active");
+      if (btnPrim && btnPrim.classList) btnPrim.classList.remove("active");
       invalidatePrim();
       updateVisuals();
       log("succ", "Campus network completely reset: all 8 connections restored to Working status.");
@@ -2521,6 +2552,8 @@
     function runBFS(animate = true) {
       AnimController.stop();
       clearHighlights();
+      const btnBFS = document.getElementById("btnRunBFS");
+      if (btnBFS && btnBFS.classList) btnBFS.classList.add("active");
 
       const vis = new Array(BUILDINGS.length).fill(false);
       const q = [0];
@@ -2654,6 +2687,8 @@
     function runPrim(animate = true) {
       AnimController.stop();
       clearHighlights();
+      const btnPrim = document.getElementById("btnRunPrim");
+      if (btnPrim && btnPrim.classList) btnPrim.classList.add("active");
 
       const n = BUILDINGS.length;
       const key = new Array(n).fill(Infinity);
