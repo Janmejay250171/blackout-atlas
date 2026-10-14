@@ -38,7 +38,11 @@
 ---
 
 ## Deployment on Render
-This project is configured for **Render Static Sites**:
-- **Build Command**: *(leave blank)*
-- **Publish Directory**: `.` (Root)
-- **Routes**: Automatically serves `index.html`.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Janmejay250171/blackout-atlas)
+
+Click the button above or follow these 3 steps:
+1. Go to [Render Dashboard](https://dashboard.render.com/) -> **New +** -> **Static Site**.
+2. Connect `Janmejay250171/blackout-atlas`.
+3. Leave **Build Command** blank and set **Publish Directory** to `.`, then click **Create Static Site**.
+
